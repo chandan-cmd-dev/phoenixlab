@@ -1,0 +1,97 @@
+{{template "layouts/base.html" .}}
+
+{{define "LayoutContent"}}
+<div class="card card-outline card-secondary">
+    <div class="card-header">
+        <h3 class="card-title">Filters</h3>
+        <div class="card-tools"><button type="button" class="btn btn-tool" data-card-widget="collapse"><i class="fas fa-minus"></i></button></div>
+    </div>
+    <div class="card-body">
+        <form method="GET">
+            <div class="row">
+                <div class="col-md-3 form-group">
+                    <label>Entity Type</label>
+                    <select name="entity" class="form-control form-control-sm">
+                        <option value="">All</option>
+                        <option value="ticket" {{if eq .filters.entity "ticket"}}selected{{end}}>Ticket</option>
+                        <option value="user" {{if eq .filters.entity "user"}}selected{{end}}>User</option>
+                    </select>
+                </div>
+                <div class="col-md-3 form-group">
+                    <label>Action</label>
+                    <select name="action" class="form-control form-control-sm">
+                        <option value="">All Actions</option>
+                        <option value="create" {{if eq .filters.action "create"}}selected{{end}}>Create</option>
+                        <option value="update" {{if eq .filters.action "update"}}selected{{end}}>Update</option>
+                        <option value="delete" {{if eq .filters.action "delete"}}selected{{end}}>Delete</option>
+                        <option value="login" {{if eq .filters.action "login"}}selected{{end}}>Login</option>
+                    </select>
+                </div>
+                <div class="col-md-3 form-group">
+                    <label>User</label>
+                    <input type="text" name="user" value="{{.filters.user}}" class="form-control form-control-sm" placeholder="Name or email...">
+                </div>
+                <div class="col-md-3 d-flex align-items-end pb-3">
+                    <button type="submit" class="btn btn-secondary btn-sm mr-1"><i class="fas fa-filter mr-1"></i>Filter</button>
+                    <a href="/audit" class="btn btn-outline-secondary btn-sm">Clear</a>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body table-responsive p-0">
+        <table class="table table-hover table-striped table-sm">
+            <thead>
+                <tr>
+                    <th style="width:30px"></th>
+                    <th>Entity</th>
+                    <th>Action</th>
+                    <th>Field</th>
+                    <th>Old &rarr; New</th>
+                    <th>Changed By</th>
+                    <th>IP</th>
+                    <th>Time</th>
+                </tr>
+            </thead>
+            <tbody>
+                {{range .logs}}
+                <tr>
+                    <td class="text-center">{{auditIcon .Action}}</td>
+                    <td>
+                        <span class="text-uppercase text-muted text-xs">{{.EntityType}}</span>
+                        {{if gt .EntityId 0}}<span class="text-muted">#{{.EntityId}}</span>{{end}}
+                        {{if eq .EntityType "ticket"}}<a href="/tickets/{{.EntityId}}" class="ml-1"><i class="fas fa-external-link-alt text-xs"></i></a>{{end}}
+                    </td>
+                    <td>
+                        <span class="badge {{if eq .Action "create"}}badge-success{{else if eq .Action "delete"}}badge-danger{{else if eq .Action "login"}}badge-info{{else}}badge-warning{{end}}">{{.Action}}</span>
+                    </td>
+                    <td>{{if .FieldName}}{{.FieldName}}{{else}}-{{end}}</td>
+                    <td>
+                        {{if and .OldValue .NewValue}}<s class="text-muted">{{truncate .OldValue 20}}</s> &rarr; {{truncate .NewValue 20}}
+                        {{else if .NewValue}}{{truncate .NewValue 20}}
+                        {{else}}-{{end}}
+                    </td>
+                    <td class="font-weight-bold">{{if .ChangedByName}}{{.ChangedByName}}{{else}}-{{end}}</td>
+                    <td class="text-muted text-xs"><code>{{if .IpAddress}}{{.IpAddress}}{{else}}-{{end}}</code></td>
+                    <td class="text-muted text-xs" style="white-space:nowrap">{{formatDateTime .ChangedAt}}</td>
+                </tr>
+                {{else}}
+                <tr><td colspan="8" class="text-center text-muted py-4">No audit records found</td></tr>
+                {{end}}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{{if gt .totalPages 1}}
+<div class="d-flex justify-content-between align-items-center mt-2">
+    <small class="text-muted">Showing {{.offset}} &ndash; {{.limit}} of {{.total}} records</small>
+    <div>
+        {{if gt .page 1}}<a href="?page={{minus .page 1}}" class="btn btn-outline-secondary btn-sm mr-1">&laquo; Previous</a>{{end}}
+        {{if lt .page .totalPages}}<a href="?page={{add .page 1}}" class="btn btn-outline-secondary btn-sm">Next &raquo;</a>{{end}}
+    </div>
+</div>
+{{end}}
+{{end}}

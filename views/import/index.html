@@ -1,0 +1,51 @@
+{{template "layouts/base.html" .}}
+
+{{define "LayoutContent"}}
+<div class="row">
+<div class="col-lg-8 mx-auto">
+    <div class="card card-primary card-outline">
+        <div class="card-header"><h3 class="card-title"><i class="fas fa-file-excel mr-1"></i>Import Excel Data</h3></div>
+        <form method="POST" action="/import" enctype="multipart/form-data">
+            <div class="card-body">
+                <div class="form-group">
+                    <label>Excel File (.xlsx) <span class="text-danger">*</span></label>
+                    <div class="custom-file">
+                        <input type="file" name="excel_file" accept=".xlsx,.xls" required class="custom-file-input" id="excelFile">
+                        <label class="custom-file-label" for="excelFile">Choose file</label>
+                    </div>
+                </div>
+                {{if .branches}}
+                <div class="form-group">
+                    <label>Assign to Branch <span class="text-danger">*</span></label>
+                    <select name="branch_id" class="form-control" required>
+                        <option value="">Select branch</option>
+                        {{range .branches}}
+                        <option value="{{.Id}}">{{.Name}}</option>
+                        {{end}}
+                    </select>
+                </div>
+                {{end}}
+                <div class="callout callout-info">
+                    <h5>Supported Formats</h5>
+                    <ul class="mb-1">
+                        <li><strong>HP sheet</strong> &mdash; Date, SN, UPC, IR, Issue, Diagnostic Code, Needed Part, Case Status, Machine Price, Part Number, Part Price, Labour Fee, PO Number, Case Number, Service Order #, Return Part?, Fixed?, Defective Shipped?, Case Finished?</li>
+                        <li><strong>Lenovo sheet</strong> &mdash; Date, SN, UPC, Case Status, Issue, Diagnostic Code, Problem Description, Needed Part, Customer Info, Part Number, Machine Price, Part Price, Labour Fee, Case Number, Work Order #, Return Part?, Fixed?, Defective Shipped?, Case Finished?</li>
+                    </ul>
+                    <small>Each sheet is imported separately. Sheet name determines brand.</small>
+                </div>
+            </div>
+            <div class="card-footer">
+                <button type="submit" class="btn btn-primary mr-2"><i class="fas fa-upload mr-1"></i>Import Data</button>
+                <a href="/tickets" class="btn btn-default">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+</div>
+<script>
+document.querySelector('.custom-file-input').addEventListener('change',function(e){
+    var fileName = e.target.files[0] ? e.target.files[0].name : 'Choose file';
+    e.target.nextElementSibling.innerText = fileName;
+});
+</script>
+{{end}}

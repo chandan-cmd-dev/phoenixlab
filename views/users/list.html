@@ -1,0 +1,56 @@
+{{template "layouts/base.html" .}}
+
+{{define "LayoutContent"}}
+<div class="card">
+    <div class="card-header">
+        <h3 class="card-title">Team Members</h3>
+        <div class="card-tools">
+            <a href="/users/new" class="btn btn-primary btn-sm"><i class="fas fa-user-plus mr-1"></i>New User</a>
+        </div>
+    </div>
+    <div class="card-body table-responsive p-0">
+        <table class="table table-hover table-striped">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Role</th>
+                    <th>Branch</th>
+                    <th>Status</th>
+                    <th>Last Login</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {{range .users}}
+                <tr>
+                    <td class="font-weight-bold">{{.Name}}</td>
+                    <td>{{.Email}}</td>
+                    <td>
+                        <span class="badge {{if eq .Role "super_admin"}}badge-purple{{else if eq .Role "admin"}}badge-primary{{else if eq .Role "technician"}}badge-success{{else}}badge-secondary{{end}}">{{.Role}}</span>
+                    </td>
+                    <td>{{if .Branch}}{{.Branch.Name}}{{else}}-{{end}}</td>
+                    <td>
+                        {{if .IsActive}}<span class="badge badge-success"><i class="fas fa-circle mr-1" style="font-size:6px;vertical-align:middle"></i>Active</span>
+                        {{else}}<span class="badge badge-secondary">Inactive</span>{{end}}
+                    </td>
+                    <td class="text-sm text-muted">{{if not .LastLoginAt.IsZero}}{{formatDateTime .LastLoginAt}}{{else}}Never{{end}}</td>
+                    <td>
+                        <a href="/users/{{.Id}}/edit" class="btn btn-xs btn-outline-primary">Edit</a>
+                        {{if not (eq .Id $.currentUser.Id)}}
+                        <form method="POST" action="/users/{{.Id}}/toggle" class="d-inline">
+                            <button type="submit" class="btn btn-xs {{if .IsActive}}btn-outline-danger{{else}}btn-outline-success{{end}}">
+                                {{if .IsActive}}Deactivate{{else}}Activate{{end}}
+                            </button>
+                        </form>
+                        {{end}}
+                    </td>
+                </tr>
+                {{else}}
+                <tr><td colspan="7" class="text-center text-muted py-4">No users found</td></tr>
+                {{end}}
+            </tbody>
+        </table>
+    </div>
+</div>
+{{end}}

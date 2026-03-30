@@ -1,0 +1,56 @@
+{{template "layouts/base.html" .}}
+
+{{define "LayoutContent"}}
+<div class="row">
+<div class="col-lg-8 mx-auto">
+    {{range .results}}
+    <div class="card">
+        <div class="card-header"><h3 class="card-title">Sheet: {{.SheetName}}</h3></div>
+        <div class="card-body">
+            <div class="row text-center">
+                <div class="col-4">
+                    <div class="info-box bg-light mb-0">
+                        <div class="info-box-content">
+                            <span class="info-box-number">{{.TotalRows}}</span>
+                            <span class="info-box-text">Total Rows</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-4">
+                    <div class="info-box bg-success mb-0">
+                        <div class="info-box-content">
+                            <span class="info-box-number">{{.Imported}}</span>
+                            <span class="info-box-text">Imported</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-4">
+                    <div class="info-box bg-warning mb-0">
+                        <div class="info-box-content">
+                            <span class="info-box-number">{{.Skipped}}</span>
+                            <span class="info-box-text">Skipped</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {{if .Errors}}
+            <div class="mt-3">
+                <h6 class="text-danger"><i class="fas fa-exclamation-triangle mr-1"></i>Errors</h6>
+                <div class="bg-light p-2 rounded" style="max-height:200px;overflow-y:auto">
+                    {{range .Errors}}
+                    <div class="text-danger text-sm">{{.}}</div>
+                    {{end}}
+                </div>
+            </div>
+            {{end}}
+        </div>
+    </div>
+    {{end}}
+
+    <div class="mb-4">
+        <a href="/tickets" class="btn btn-primary mr-2"><i class="fas fa-list mr-1"></i>View Tickets</a>
+        <a href="/import" class="btn btn-default">Import Another File</a>
+    </div>
+</div>
+</div>
+{{end}}

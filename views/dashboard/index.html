@@ -1,0 +1,80 @@
+{{template "layouts/base.html" .}}
+
+{{define "LayoutContent"}}
+<div class="row">
+    {{range .kpiCards}}
+    <div class="col-lg-3 col-6">
+        <div class="small-box {{if .Up}}bg-success{{else}}bg-info{{end}}">
+            <div class="inner">
+                <h3>{{.Value}}</h3>
+                <p>{{.Label}}</p>
+            </div>
+            <div class="icon"><i class="fas fa-clipboard-list"></i></div>
+            <span class="small-box-footer">{{if .Up}}<i class="fas fa-arrow-up"></i>{{else}}<i class="fas fa-arrow-down"></i>{{end}} {{.Change}} vs last week</span>
+        </div>
+    </div>
+    {{end}}
+</div>
+
+<div class="row">
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header border-0">
+                <h3 class="card-title">Monthly Volume &amp; Resolution</h3>
+            </div>
+            <div class="card-body">
+                <canvas id="monthlyChart" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header border-0">
+                <h3 class="card-title">Ticket Status Distribution</h3>
+            </div>
+            <div class="card-body">
+                <canvas id="statusChart" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header border-0">
+        <h3 class="card-title">Recent Tickets</h3>
+        <div class="card-tools">
+            <a href="/tickets" class="btn btn-tool btn-sm"><i class="fas fa-arrow-right"></i> View All</a>
+        </div>
+    </div>
+    <div class="card-body table-responsive p-0">
+        <table class="table table-hover table-striped text-nowrap">
+            <thead>
+                <tr>
+                    <th>S/N</th>
+                    <th>Model</th>
+                    <th>Issue</th>
+                    <th>Status</th>
+                    <th>Assigned</th>
+                    <th>TAT</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {{range .recentTickets}}
+                <tr>
+                    <td><a href="/tickets/{{.Id}}"><code>{{.SerialNumber}}</code></a></td>
+                    <td>{{.Brand}} {{.Model}}</td>
+                    <td>{{truncate .IssueDescription 50}}</td>
+                    <td><span class="badge status-{{.Status}}">{{statusLabel .Status}}</span></td>
+                    <td>{{.AssignedToName}}</td>
+                    <td>{{formatTAT .TATHours}}</td>
+                    <td><a href="/tickets/{{.Id}}" class="btn btn-xs btn-outline-primary">Open</a></td>
+                </tr>
+                {{else}}
+                <tr><td colspan="7" class="text-center text-muted py-4">No tickets found</td></tr>
+                {{end}}
+            </tbody>
+        </table>
+    </div>
+</div>
+{{end}}

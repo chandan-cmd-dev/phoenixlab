@@ -1,0 +1,124 @@
+{{template "layouts/base.html" .}}
+
+{{define "LayoutContent"}}
+<div class="row">
+    <div class="col-lg-3 col-6">
+        <div class="info-box">
+            <span class="info-box-icon bg-info"><i class="fas fa-clock"></i></span>
+            <div class="info-box-content">
+                <span class="info-box-text">Avg. Turnaround</span>
+                <span class="info-box-number">{{formatTAT .avgTAT}}</span>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-3 col-6">
+        <div class="info-box">
+            <span class="info-box-icon bg-success"><i class="fas fa-shield-alt"></i></span>
+            <div class="info-box-content">
+                <span class="info-box-text">In Warranty</span>
+                <span class="info-box-number">{{index .warrantyBreakdown "in_warranty"}}</span>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-3 col-6">
+        <div class="info-box">
+            <span class="info-box-icon bg-warning"><i class="fas fa-exclamation-triangle"></i></span>
+            <div class="info-box-content">
+                <span class="info-box-text">Out of Warranty</span>
+                <span class="info-box-number">{{index .warrantyBreakdown "out_of_warranty"}}</span>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-3 col-6">
+        <div class="info-box">
+            <span class="info-box-icon bg-primary"><i class="fas fa-plus-circle"></i></span>
+            <div class="info-box-content">
+                <span class="info-box-text">Extended Warranty</span>
+                <span class="info-box-number">{{index .warrantyBreakdown "extended_warranty"}}</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header border-0"><h3 class="card-title">Monthly Volume &amp; Resolution</h3></div>
+            <div class="card-body"><canvas id="monthlyChart" height="220"></canvas></div>
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header border-0"><h3 class="card-title">Current Status Distribution</h3></div>
+            <div class="card-body"><canvas id="statusChart" height="220"></canvas></div>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header border-0"><h3 class="card-title">Technician Workload</h3></div>
+    <div class="card-body table-responsive p-0">
+        <table class="table table-hover table-striped">
+            <thead>
+                <tr>
+                    <th>Technician</th>
+                    <th class="text-right">Open</th>
+                    <th class="text-right">Resolved</th>
+                    <th class="text-right">Total</th>
+                    <th>Load</th>
+                </tr>
+            </thead>
+            <tbody>
+                {{range .techStats}}
+                <tr>
+                    <td class="font-weight-bold">{{.TechnicianName}}</td>
+                    <td class="text-right text-primary font-weight-bold">{{.Open}}</td>
+                    <td class="text-right text-success">{{.Resolved}}</td>
+                    <td class="text-right">{{.Total}}</td>
+                    <td>
+                        <div class="d-flex align-items-center">
+                            <div class="progress flex-grow-1 mr-2" style="height:6px">
+                                {{if gt .Total 0}}
+                                <div class="progress-bar bg-primary" style="width:{{pct .Open .Total}}%"></div>
+                                {{end}}
+                            </div>
+                            <small class="text-muted">{{if gt .Total 0}}{{pct .Open .Total}}%{{else}}0%{{end}}</small>
+                        </div>
+                    </td>
+                </tr>
+                {{else}}
+                <tr><td colspan="5" class="text-center text-muted py-4">No technician data available</td></tr>
+                {{end}}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+var monthlyData = {{.monthlyJSON}};
+if (document.getElementById('monthlyChart') && monthlyData) {
+    new Chart(document.getElementById('monthlyChart'), {
+        type: 'bar',
+        data: {
+            labels: monthlyData.labels,
+            datasets: [
+                {label: 'Received', data: monthlyData.received, backgroundColor: '#007bff'},
+                {label: 'Resolved', data: monthlyData.resolved, backgroundColor: '#28a745'}
+            ]
+        },
+        options: {responsive: true, plugins: {legend: {position: 'bottom'}}}
+    });
+}
+var statusData = {{.statusJSON}};
+if (document.getElementById('statusChart') && statusData) {
+    new Chart(document.getElementById('statusChart'), {
+        type: 'doughnut',
+        data: {
+            labels: statusData.labels,
+            datasets: [{data: statusData.values, backgroundColor: ['#007bff','#ffc107','#6f42c1','#fd7e14','#20c997','#28a745','#6c757d','#e0a800','#dc3545']}]
+        },
+        options: {responsive: true, plugins: {legend: {position: 'right'}}}
+    });
+}
+</script>
+{{end}}

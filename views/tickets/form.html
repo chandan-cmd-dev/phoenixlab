@@ -1,0 +1,245 @@
+{{template "layouts/base.html" .}}
+
+{{define "LayoutContent"}}
+<div class="row">
+<div class="col-lg-10 mx-auto">
+    <form method="POST" action="{{if .ticket}}/tickets/{{.ticket.Id}}{{else}}/tickets{{end}}">
+        {{if .ticket}}<input type="hidden" name="version" value="{{.ticket.Version}}">{{end}}
+
+        <div class="card card-primary card-outline">
+            <div class="card-header"><h3 class="card-title">Device Information</h3></div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4 form-group">
+                        <label>Serial Number <span class="text-danger">*</span></label>
+                        <input type="text" name="serial_number" value="{{if .ticket}}{{.ticket.SerialNumber}}{{end}}" required class="form-control" placeholder="e.g. 1H85244H5F">
+                    </div>
+                    <div class="col-md-4 form-group">
+                        <label>UPC</label>
+                        <input type="text" name="upc" value="{{if .ticket}}{{.ticket.Upc}}{{end}}" class="form-control" placeholder="e.g. 198415733962-L">
+                    </div>
+                    <div class="col-md-4 form-group">
+                        <label>IR / Product Number</label>
+                        <input type="text" name="ir_number" value="{{if .ticket}}{{.ticket.IrNumber}}{{end}}" class="form-control" placeholder="e.g. A82ZVUA#ABA">
+                    </div>
+                    <div class="col-md-4 form-group">
+                        <label>Brand</label>
+                        <select name="brand" class="form-control">
+                            <option value="">Select brand</option>
+                            <option value="HP" {{if .ticket}}{{if eq .ticket.Brand "HP"}}selected{{end}}{{end}}>HP</option>
+                            <option value="Lenovo" {{if .ticket}}{{if eq .ticket.Brand "Lenovo"}}selected{{end}}{{end}}>Lenovo</option>
+                            <option value="Dell" {{if .ticket}}{{if eq .ticket.Brand "Dell"}}selected{{end}}{{end}}>Dell</option>
+                            <option value="Other" {{if .ticket}}{{if eq .ticket.Brand "Other"}}selected{{end}}{{end}}>Other</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4 form-group">
+                        <label>Model</label>
+                        <input type="text" name="model" value="{{if .ticket}}{{.ticket.Model}}{{end}}" class="form-control" placeholder="e.g. EliteBook 840 G10">
+                    </div>
+                    <div class="col-md-4 form-group">
+                        <label>Warranty Status</label>
+                        <select name="warranty_status" class="form-control">
+                            <option value="in_warranty" {{if .ticket}}{{if eq .ticket.WarrantyStatus "in_warranty"}}selected{{end}}{{end}}>In Warranty</option>
+                            <option value="out_of_warranty" {{if .ticket}}{{if eq .ticket.WarrantyStatus "out_of_warranty"}}selected{{end}}{{end}}>Out of Warranty</option>
+                            <option value="extended_warranty" {{if .ticket}}{{if eq .ticket.WarrantyStatus "extended_warranty"}}selected{{end}}{{end}}>Extended Warranty</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card card-info card-outline">
+            <div class="card-header"><h3 class="card-title">Issue &amp; Diagnosis</h3></div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4 form-group">
+                        <label>Issue Category</label>
+                        <select name="issue_category" class="form-control">
+                            <option value="">Select category</option>
+                            <option value="hardware" {{if .ticket}}{{if eq .ticket.IssueCategory "hardware"}}selected{{end}}{{end}}>Hardware</option>
+                            <option value="software" {{if .ticket}}{{if eq .ticket.IssueCategory "software"}}selected{{end}}{{end}}>Software</option>
+                            <option value="display" {{if .ticket}}{{if eq .ticket.IssueCategory "display"}}selected{{end}}{{end}}>Display</option>
+                            <option value="battery" {{if .ticket}}{{if eq .ticket.IssueCategory "battery"}}selected{{end}}{{end}}>Battery</option>
+                            <option value="keyboard" {{if .ticket}}{{if eq .ticket.IssueCategory "keyboard"}}selected{{end}}{{end}}>Keyboard</option>
+                            <option value="other" {{if .ticket}}{{if eq .ticket.IssueCategory "other"}}selected{{end}}{{end}}>Other</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4 form-group">
+                        <label>Priority</label>
+                        <select name="priority" class="form-control">
+                            <option value="normal" {{if .ticket}}{{if eq .ticket.Priority "normal"}}selected{{end}}{{else}}selected{{end}}>Normal</option>
+                            <option value="low" {{if .ticket}}{{if eq .ticket.Priority "low"}}selected{{end}}{{end}}>Low</option>
+                            <option value="high" {{if .ticket}}{{if eq .ticket.Priority "high"}}selected{{end}}{{end}}>High</option>
+                            <option value="critical" {{if .ticket}}{{if eq .ticket.Priority "critical"}}selected{{end}}{{end}}>Critical</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4 form-group">
+                        <label>Diagnostic Code</label>
+                        <input type="text" name="diagnostic_code" value="{{if .ticket}}{{.ticket.DiagnosticCode}}{{end}}" class="form-control" placeholder="N/A if none">
+                    </div>
+                    <div class="col-md-4 form-group">
+                        <label>Needed Part</label>
+                        <input type="text" name="needed_part" value="{{if .ticket}}{{.ticket.NeededPart}}{{end}}" class="form-control" placeholder="e.g. LCD panel, Motherboard">
+                    </div>
+                    <div class="col-md-8 form-group">
+                        <label>Issue (Brief)</label>
+                        <input type="text" name="issue_description" value="{{if .ticket}}{{.ticket.IssueDescription}}{{end}}" class="form-control" placeholder="e.g. Dark Screen, NO BOOT">
+                    </div>
+                    <div class="col-12 form-group">
+                        <label>Detailed Problem Description</label>
+                        <textarea name="problem_description" rows="3" class="form-control" placeholder="Detailed description...">{{if .ticket}}{{.ticket.ProblemDescription}}{{end}}</textarea>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card card-warning card-outline">
+            <div class="card-header"><h3 class="card-title">Parts &amp; Costs</h3></div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4 form-group">
+                        <label>Part Number</label>
+                        <input type="text" name="part_number" value="{{if .ticket}}{{.ticket.PartNumber}}{{end}}" class="form-control" placeholder="e.g. N39379-001">
+                    </div>
+                    <div class="col-md-4 form-group">
+                        <label>Machine Purchase Price ($)</label>
+                        <input type="number" name="machine_purchase_price" value="{{if .ticket}}{{.ticket.MachinePurchasePrice}}{{else}}0{{end}}" step="0.01" min="0" class="form-control">
+                    </div>
+                    <div class="col-md-4 form-group">
+                        <label>Part Retail Price ($)</label>
+                        <input type="number" name="parts_cost" value="{{if .ticket}}{{.ticket.PartsCost}}{{else}}0{{end}}" step="0.01" min="0" class="form-control">
+                    </div>
+                    <div class="col-md-4 form-group">
+                        <label>Labour / Reimbursement Fee ($)</label>
+                        <input type="number" name="labour_cost" value="{{if .ticket}}{{.ticket.LabourCost}}{{else}}0{{end}}" step="0.01" min="0" class="form-control">
+                    </div>
+                    <div class="col-md-4 form-group">
+                        <label>PO Number</label>
+                        <input type="text" name="po_number" value="{{if .ticket}}{{.ticket.PoNumber}}{{end}}" class="form-control" placeholder="e.g. PO20251218001">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card card-secondary card-outline">
+            <div class="card-header"><h3 class="card-title">Case &amp; Completion Tracking</h3></div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4 form-group">
+                        <label>Case Number</label>
+                        <input type="text" name="case_number" value="{{if .ticket}}{{.ticket.CaseNumber}}{{end}}" class="form-control" placeholder="Manufacturer case #">
+                    </div>
+                    <div class="col-md-4 form-group">
+                        <label>Work Order / Service Order #</label>
+                        <input type="text" name="work_order_number" value="{{if .ticket}}{{.ticket.WorkOrderNumber}}{{end}}" class="form-control" placeholder="e.g. BXHX7361">
+                    </div>
+                    <div class="col-md-4 form-group">
+                        <label>Defective Part Shipped?</label>
+                        <select name="defective_part_shipped" class="form-control">
+                            <option value="" {{if .ticket}}{{if eq .ticket.DefectivePartShipped ""}}selected{{end}}{{else}}selected{{end}}>N/A</option>
+                            <option value="YES" {{if .ticket}}{{if eq .ticket.DefectivePartShipped "YES"}}selected{{end}}{{end}}>YES</option>
+                            <option value="NO" {{if .ticket}}{{if eq .ticket.DefectivePartShipped "NO"}}selected{{end}}{{end}}>NO</option>
+                            <option value="No Need" {{if .ticket}}{{if eq .ticket.DefectivePartShipped "No Need"}}selected{{end}}{{end}}>No Need</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4 form-group">
+                        <label>Return Tracking #</label>
+                        <input type="text" name="return_tracking" value="{{if .ticket}}{{.ticket.ReturnTracking}}{{end}}" class="form-control" placeholder="Return shipment tracking">
+                    </div>
+                </div>
+                <div class="row mt-2">
+                    <div class="col-md-4">
+                        <div class="custom-control custom-checkbox">
+                            <input type="hidden" name="return_part" value="false">
+                            <input type="checkbox" name="return_part" value="true" id="return_part" class="custom-control-input" {{if .ticket}}{{if .ticket.ReturnPart}}checked{{end}}{{end}}>
+                            <label for="return_part" class="custom-control-label">Return broken parts to manufacturer?</label>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="custom-control custom-checkbox">
+                            <input type="hidden" name="part_arrived_fixed" value="false">
+                            <input type="checkbox" name="part_arrived_fixed" value="true" id="part_arrived_fixed" class="custom-control-input" {{if .ticket}}{{if .ticket.PartArrivedFixed}}checked{{end}}{{end}}>
+                            <label for="part_arrived_fixed" class="custom-control-label">Part arrived &amp; machine fixed?</label>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="custom-control custom-checkbox">
+                            <input type="hidden" name="case_finished" value="false">
+                            <input type="checkbox" name="case_finished" value="true" id="case_finished" class="custom-control-input" {{if .ticket}}{{if .ticket.CaseFinished}}checked{{end}}{{end}}>
+                            <label for="case_finished" class="custom-control-label">Case finished?</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card card-outline card-dark">
+            <div class="card-header"><h3 class="card-title">Assignment</h3></div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4 form-group">
+                        <label>Assign To</label>
+                        <select name="assigned_to" class="form-control">
+                            <option value="0">Unassigned</option>
+                            {{range .technicians}}
+                            <option value="{{.Id}}" {{if $.ticket}}{{if eq $.ticket.AssignedTo .Id}}selected{{end}}{{end}}>{{.Name}}</option>
+                            {{end}}
+                        </select>
+                    </div>
+                    <div class="col-md-4 form-group">
+                        <label>Due Date</label>
+                        <input type="date" name="due_date" value="{{if .ticket}}{{formatDateInput .ticket.DueDate}}{{end}}" class="form-control">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card card-outline card-dark">
+            <div class="card-header"><h3 class="card-title">Customer &amp; Courier</h3></div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4 form-group">
+                        <label>Customer Name</label>
+                        <input type="text" name="customer_name" value="{{if .ticket}}{{.ticket.CustomerName}}{{end}}" class="form-control" placeholder="Full name">
+                    </div>
+                    <div class="col-md-4 form-group">
+                        <label>Customer Email</label>
+                        <input type="email" name="customer_email" value="{{if .ticket}}{{.ticket.CustomerEmail}}{{end}}" class="form-control" placeholder="email@example.com">
+                    </div>
+                    <div class="col-md-4 form-group">
+                        <label>Customer Phone</label>
+                        <input type="tel" name="customer_phone" value="{{if .ticket}}{{.ticket.CustomerPhone}}{{end}}" class="form-control">
+                    </div>
+                    <div class="col-md-4 form-group">
+                        <label>Courier Name</label>
+                        <input type="text" name="courier_name" value="{{if .ticket}}{{.ticket.CourierName}}{{end}}" class="form-control" placeholder="e.g. DHL, FedEx">
+                    </div>
+                    <div class="col-md-4 form-group">
+                        <label>Tracking Number</label>
+                        <input type="text" name="courier_tracking" value="{{if .ticket}}{{.ticket.CourierTracking}}{{end}}" class="form-control">
+                    </div>
+                    <div class="col-md-4 form-group">
+                        <label>Tracking Link</label>
+                        <input type="url" name="tracking_link" value="{{if .ticket}}{{.ticket.TrackingLink}}{{end}}" class="form-control" placeholder="https://...">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card card-outline card-dark">
+            <div class="card-header"><h3 class="card-title">Internal Notes</h3></div>
+            <div class="card-body">
+                <textarea name="notes" rows="3" class="form-control" placeholder="Internal notes (not visible to customer)...">{{if .ticket}}{{.ticket.Notes}}{{end}}</textarea>
+            </div>
+        </div>
+
+        <div class="mb-4">
+            <button type="submit" class="btn btn-primary mr-2">
+                <i class="fas fa-save mr-1"></i>{{if .ticket}}Update Ticket{{else}}Create Ticket{{end}}
+            </button>
+            <a href="/tickets{{if .ticket}}/{{.ticket.Id}}{{end}}" class="btn btn-default">Cancel</a>
+        </div>
+    </form>
+</div>
+</div>
+{{end}}

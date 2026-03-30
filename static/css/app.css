@@ -1,0 +1,23 @@
+/* Status badge styles (AdminLTE / Bootstrap 4) */
+.badge.status-open           { background: #007bff; color: #fff; }
+.badge.status-diagnosing     { background: #ffc107; color: #333; }
+.badge.status-parts_ordered  { background: #6f42c1; color: #fff; }
+.badge.status-part_applied   { background: #fd7e14; color: #fff; }
+.badge.status-in_repair      { background: #e83e8c; color: #fff; }
+.badge.status-qc_check       { background: #20c997; color: #fff; }
+.badge.status-resolved       { background: #28a745; color: #fff; }
+.badge.status-closed         { background: #6c757d; color: #fff; }
+.badge.status-on_hold        { background: #e0a800; color: #333; }
+.badge.status-cancelled      { background: #dc3545; color: #fff; }
+
+/* Priority row indicators */
+.priority-critical { border-left: 3px solid #dc3545; }
+.priority-high     { border-left: 3px solid #fd7e14; }
+.priority-normal   { border-left: 3px solid #007bff; }
+.priority-low      { border-left: 3px solid #6c757d; }
+
+/* Custom badge color for super_admin */
+.badge-purple { background: #6f42c1; color: #fff; }
+
+/* Ensure mx-auto works inside row for centering cards */
+.mx-auto { margin-left: auto !important; margin-right: auto !important; float: none !important; }

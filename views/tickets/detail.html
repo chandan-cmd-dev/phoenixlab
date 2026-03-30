@@ -1,0 +1,241 @@
+{{template "layouts/base.html" .}}
+
+{{define "LayoutContent"}}
+<div class="row mb-3">
+    <div class="col-12 d-flex justify-content-between">
+        <a href="/tickets" class="btn btn-default btn-sm"><i class="fas fa-arrow-left mr-1"></i>Back to Tickets</a>
+        <div>
+            <a href="/tickets/{{.ticket.Id}}/edit" class="btn btn-outline-primary btn-sm"><i class="fas fa-edit mr-1"></i>Edit</a>
+            {{if eq .currentUser.Role "super_admin"}}
+            <form method="POST" action="/tickets/{{.ticket.Id}}/delete" class="d-inline" onsubmit="return confirm('Delete this ticket permanently?')">
+                <button type="submit" class="btn btn-outline-danger btn-sm"><i class="fas fa-trash mr-1"></i>Delete</button>
+            </form>
+            {{end}}
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title"><code class="text-lg">{{.ticket.SerialNumber}}</code></h3>
+                <div class="card-tools">
+                    <span class="badge status-{{.ticket.Status}} mr-1">{{statusLabel .ticket.Status}}</span>
+                    <span class="badge {{if eq .ticket.Priority "critical"}}badge-danger{{else if eq .ticket.Priority "high"}}badge-warning{{else if eq .ticket.Priority "low"}}badge-secondary{{else}}badge-info{{end}}">{{.ticket.Priority}}</span>
+                </div>
+            </div>
+            <div class="card-body">
+                {{if .ticket.Brand}}<p class="text-muted mb-3">{{.ticket.Brand}} {{.ticket.Model}}</p>{{end}}
+                <div class="mb-3">
+                    <small class="text-muted d-block mb-1">Update Status</small>
+                    <div id="status-buttons">
+                        {{$status := .ticket.Status}}
+                        {{$id := .ticket.Id}}
+                        {{range $s := list "open" "diagnosing" "parts_ordered" "part_applied" "in_repair" "qc_check" "resolved" "closed" "on_hold" "cancelled"}}
+                        {{if not (eq $s $status)}}
+                        <button onclick="updateStatus({{$id}}, '{{$s}}')" class="btn btn-outline-secondary btn-xs mb-1">{{statusLabel $s}}</button>
+                        {{end}}
+                        {{end}}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header"><h3 class="card-title">Issue Details</h3></div>
+            <div class="card-body">
+                <div class="row text-sm">
+                    <div class="col-6 mb-2"><strong>Category:</strong> {{if .ticket.IssueCategory}}{{statusLabel .ticket.IssueCategory}}{{else}}-{{end}}</div>
+                    <div class="col-6 mb-2"><strong>Warranty:</strong> {{statusLabel .ticket.WarrantyStatus}}</div>
+                    <div class="col-6 mb-2"><strong>IR / Product #:</strong> <code>{{if .ticket.IrNumber}}{{.ticket.IrNumber}}{{else}}-{{end}}</code></div>
+                    <div class="col-6 mb-2"><strong>UPC:</strong> <code>{{if .ticket.Upc}}{{.ticket.Upc}}{{else}}-{{end}}</code></div>
+                    <div class="col-6 mb-2"><strong>Diagnostic Code:</strong> {{if .ticket.DiagnosticCode}}{{.ticket.DiagnosticCode}}{{else}}-{{end}}</div>
+                    <div class="col-6 mb-2"><strong>Needed Part:</strong> {{if .ticket.NeededPart}}<span class="font-weight-bold">{{.ticket.NeededPart}}</span>{{else}}-{{end}}</div>
+                </div>
+                <hr>
+                <strong class="d-block mb-1">Issue:</strong>
+                <div class="bg-light rounded p-2 text-sm">{{if .ticket.IssueDescription}}{{.ticket.IssueDescription}}{{else}}-{{end}}</div>
+                {{if .ticket.ProblemDescription}}
+                <strong class="d-block mt-3 mb-1">Problem Description:</strong>
+                <div class="bg-light rounded p-2 text-sm" style="white-space:pre-wrap">{{.ticket.ProblemDescription}}</div>
+                {{end}}
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header"><h3 class="card-title">Parts &amp; Costs</h3></div>
+            <div class="card-body">
+                <div class="row text-sm">
+                    <div class="col-6 mb-2"><strong>Part Number:</strong> <code>{{if .ticket.PartNumber}}{{.ticket.PartNumber}}{{else}}-{{end}}</code></div>
+                    <div class="col-6 mb-2"><strong>PO Number:</strong> <code>{{if .ticket.PoNumber}}{{.ticket.PoNumber}}{{else}}-{{end}}</code></div>
+                    <div class="col-4 mb-2"><strong>Machine Price:</strong> {{formatCurrency .ticket.MachinePurchasePrice}}</div>
+                    <div class="col-4 mb-2"><strong>Part Price:</strong> {{formatCurrency .ticket.PartsCost}}</div>
+                    <div class="col-4 mb-2"><strong>Labour Fee:</strong> {{formatCurrency .ticket.LabourCost}}</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header"><h3 class="card-title">Case Tracking</h3></div>
+            <div class="card-body">
+                <div class="row text-sm">
+                    <div class="col-6 mb-2"><strong>Case Number:</strong> <code>{{if .ticket.CaseNumber}}{{.ticket.CaseNumber}}{{else}}-{{end}}</code></div>
+                    <div class="col-6 mb-2"><strong>Work Order #:</strong> <code>{{if .ticket.WorkOrderNumber}}{{.ticket.WorkOrderNumber}}{{else}}-{{end}}</code></div>
+                </div>
+                <hr>
+                <div class="row text-sm">
+                    <div class="col-6 mb-2"><i class="fas {{if .ticket.ReturnPart}}fa-check-circle text-success{{else}}fa-times-circle text-muted{{end}} mr-1"></i>Return broken parts</div>
+                    <div class="col-6 mb-2"><i class="fas {{if .ticket.PartArrivedFixed}}fa-check-circle text-success{{else}}fa-times-circle text-muted{{end}} mr-1"></i>Part arrived &amp; fixed</div>
+                    <div class="col-6 mb-2"><strong>Defective Part Shipped:</strong>
+                        <span class="{{if eq .ticket.DefectivePartShipped "YES"}}text-success font-weight-bold{{else if eq .ticket.DefectivePartShipped "NO"}}text-danger{{else}}text-muted{{end}}">
+                            {{if .ticket.DefectivePartShipped}}{{.ticket.DefectivePartShipped}}{{else}}-{{end}}
+                        </span>
+                    </div>
+                    <div class="col-6 mb-2"><i class="fas {{if .ticket.CaseFinished}}fa-check-circle text-success{{else}}fa-times-circle text-muted{{end}} mr-1"></i>Case finished</div>
+                </div>
+            </div>
+        </div>
+
+        {{if or .ticket.CourierName .ticket.CourierTracking}}
+        <div class="card">
+            <div class="card-header"><h3 class="card-title">Courier</h3></div>
+            <div class="card-body">
+                <div class="row text-sm">
+                    <div class="col-6"><strong>Courier:</strong> {{if .ticket.CourierName}}{{.ticket.CourierName}}{{else}}-{{end}}</div>
+                    <div class="col-6"><strong>Tracking #:</strong>
+                        {{if .ticket.TrackingLink}}<a href="{{.ticket.TrackingLink}}" target="_blank">{{if .ticket.CourierTracking}}{{.ticket.CourierTracking}}{{else}}View{{end}}</a>
+                        {{else}}{{if .ticket.CourierTracking}}{{.ticket.CourierTracking}}{{else}}-{{end}}{{end}}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {{end}}
+
+        {{if .ticket.Notes}}
+        <div class="card card-warning card-outline">
+            <div class="card-header"><h3 class="card-title">Internal Notes</h3></div>
+            <div class="card-body"><div class="bg-light rounded p-2 text-sm" style="white-space:pre-wrap">{{.ticket.Notes}}</div></div>
+        </div>
+        {{end}}
+
+        <div class="card card-outline card-primary">
+            <div class="card-header"><h3 class="card-title"><i class="fas fa-comments mr-1"></i>Comments</h3></div>
+            <div class="card-body">
+                <form method="POST" action="/tickets/{{.ticket.Id}}/comments" class="mb-3">
+                    <div class="input-group">
+                        <input type="text" name="body" class="form-control" placeholder="Add a comment..." required>
+                        <div class="input-group-append">
+                            <button type="submit" class="btn btn-primary">Post</button>
+                        </div>
+                    </div>
+                </form>
+                <div class="direct-chat-messages" style="max-height:400px;overflow-y:auto">
+                    {{range .comments}}
+                    <div class="direct-chat-msg">
+                        <div class="direct-chat-infos clearfix">
+                            <span class="direct-chat-name float-left">{{if .User}}{{.User.Name}}{{else}}Unknown{{end}}</span>
+                            <span class="direct-chat-timestamp float-right">{{formatDateTime .CreatedAt}}</span>
+                        </div>
+                        <img class="direct-chat-img" src="https://ui-avatars.com/api/?name={{if .User}}{{.User.Name}}{{else}}U{{end}}&size=40&background=007bff&color=fff" alt="">
+                        <div class="direct-chat-text">{{.Body}}</div>
+                    </div>
+                    {{else}}
+                    <p class="text-muted text-center py-3">No comments yet. Be the first to add one.</p>
+                    {{end}}
+                </div>
+            </div>
+        </div>
+
+        <div class="card collapsed-card">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-history mr-1"></i>Activity Log</h3>
+                <div class="card-tools"><button type="button" class="btn btn-tool" data-card-widget="collapse"><i class="fas fa-plus"></i></button></div>
+            </div>
+            <div class="card-body p-0">
+                <table class="table table-sm table-striped mb-0">
+                    <tbody>
+                        {{range .auditLogs}}
+                        <tr>
+                            <td class="text-center" style="width:30px">{{auditIcon .Action}}</td>
+                            <td><strong>{{.ChangedByName}}</strong> {{.Action}}d {{if .FieldName}}{{.FieldName}}{{end}}
+                                {{if and .OldValue .NewValue}}<small class="text-muted"><s>{{truncate .OldValue 20}}</s> &rarr; {{truncate .NewValue 20}}</small>{{end}}
+                            </td>
+                            <td class="text-right text-sm text-muted" style="white-space:nowrap">{{formatDateTime .ChangedAt}}</td>
+                        </tr>
+                        {{else}}
+                        <tr><td class="text-center text-muted py-3">No activity yet</td></tr>
+                        {{end}}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card card-primary card-outline">
+            <div class="card-header"><h3 class="card-title">Assignment</h3></div>
+            <div class="card-body text-sm">
+                <dl class="mb-0">
+                    <dt>Assigned to</dt>
+                    <dd>{{if .ticket.Assigned}}{{.ticket.Assigned.Name}}{{else}}<span class="text-muted">Unassigned</span>{{end}}</dd>
+                    {{if .ticket.Branch}}<dt>Branch</dt><dd>{{.ticket.Branch.Name}}</dd>{{end}}
+                    <dt>Created by</dt>
+                    <dd>{{if .ticket.Creator}}{{.ticket.Creator.Name}}{{else}}-{{end}}</dd>
+                </dl>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header"><h3 class="card-title">Timeline</h3></div>
+            <div class="card-body text-sm">
+                <dl class="mb-0">
+                    <dt>Received</dt><dd>{{formatDate .ticket.ReceivedAt}}</dd>
+                    {{if not .ticket.DueDate.IsZero}}
+                    <dt>Due</dt>
+                    <dd>{{formatDate .ticket.DueDate}}{{if .ticket.IsOverdue}} <span class="badge badge-danger">Overdue</span>{{end}}</dd>
+                    {{end}}
+                    {{if not .ticket.ResolvedAt.IsZero}}
+                    <dt>Resolved</dt><dd class="text-success">{{formatDate .ticket.ResolvedAt}}</dd>
+                    {{end}}
+                    <dt>TAT</dt><dd class="font-weight-bold">{{formatTAT .ticket.GetTATHours}}</dd>
+                </dl>
+            </div>
+        </div>
+
+        {{if or .ticket.CustomerName .ticket.CustomerEmail .ticket.CustomerPhone}}
+        <div class="card">
+            <div class="card-header"><h3 class="card-title">Customer</h3></div>
+            <div class="card-body text-sm">
+                {{if .ticket.CustomerName}}<p class="font-weight-bold mb-1">{{.ticket.CustomerName}}</p>{{end}}
+                {{if .ticket.CustomerEmail}}<p class="mb-1"><a href="mailto:{{.ticket.CustomerEmail}}">{{.ticket.CustomerEmail}}</a></p>{{end}}
+                {{if .ticket.CustomerPhone}}<p class="mb-0">{{.ticket.CustomerPhone}}</p>{{end}}
+            </div>
+        </div>
+        {{end}}
+
+        {{if .ticket.ReturnPart}}
+        <div class="card">
+            <div class="card-header"><h3 class="card-title">Return Part</h3></div>
+            <div class="card-body text-sm">Tracking: {{if .ticket.ReturnTracking}}{{.ticket.ReturnTracking}}{{else}}-{{end}}</div>
+        </div>
+        {{end}}
+    </div>
+</div>
+
+<script>
+function updateStatus(id, status) {
+    if (!confirm('Change status to "' + status.replace(/_/g, ' ') + '"?')) return;
+    fetch('/tickets/' + id + '/status', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+        body: 'status=' + status
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) location.reload();
+        else alert('Error: ' + data.error);
+    });
+}
+</script>
+{{end}}
