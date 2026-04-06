@@ -77,46 +77,75 @@
 </div>
 
 <div class="card">
+    <div class="card-header">
+        <span class="text-muted text-sm">{{.totalCount}} tickets found</span>
+    </div>
     <div class="card-body table-responsive p-0">
-        <table class="table table-hover table-striped">
+        <table class="table table-sm table-hover mb-0" style="font-size:.85rem">
             <thead>
-                <tr>
-                    <th>S/N</th>
-                    <th>Customer</th>
-                    <th>Device</th>
+                <tr class="text-uppercase text-muted" style="font-size:.7rem; letter-spacing:.05em">
+                    <th style="width:60px" class="pl-3">#</th>
                     <th>Issue</th>
-                    <th>Status</th>
-                    <th>Priority</th>
-                    <th>Assigned</th>
-                    <th>Received</th>
-                    <th></th>
+                    <th style="width:100px">Status</th>
+                    <th style="width:150px">Tags</th>
+                    <th style="width:110px">Assigned</th>
+                    <th style="width:100px">Received</th>
+                    <th style="width:100px"></th>
                 </tr>
             </thead>
             <tbody>
-                {{range .tickets}}
-                <tr class="priority-{{.Priority}}">
-                    <td><a href="/tickets/{{.Id}}"><code>{{.SerialNumber}}</code></a></td>
-                    <td>{{if .CustomerName}}{{.CustomerName}}{{else}}-{{end}}</td>
-                    <td>{{if .Brand}}{{.Brand}} {{.Model}}{{else}}-{{end}}</td>
-                    <td>{{if .IssueDescription}}{{truncate .IssueDescription 40}}{{else}}-{{end}}</td>
-                    <td><span class="badge status-{{.Status}}">{{statusLabel .Status}}</span></td>
-                    <td>
-                        <span class="badge {{if eq .Priority "critical"}}badge-danger{{else if eq .Priority "high"}}badge-warning{{else if eq .Priority "low"}}badge-secondary{{else}}badge-info{{end}}">{{.Priority}}</span>
+                {{range .groups}}
+                <tr class="sn-group-header">
+                    <td colspan="7" class="py-1 pl-3">
+                        <i class="fas fa-laptop text-muted mr-1" style="font-size:.75rem"></i>
+                        <strong class="mr-2">{{.SerialNumber}}</strong>
+                        {{if .Brand}}<small class="text-muted mr-2">{{.Brand}} {{.Model}}</small>{{end}}
+                        {{if eq .WarrantyStatus "in_warranty"}}<span class="badge badge-success" style="font-size:.65rem">In Warranty</span>
+                        {{else if eq .WarrantyStatus "out_of_warranty"}}<span class="badge badge-danger" style="font-size:.65rem">Out of Warranty</span>
+                        {{else if eq .WarrantyStatus "extended_warranty"}}<span class="badge badge-warning" style="font-size:.65rem">Extended</span>{{end}}
+                        <span class="text-muted ml-1" style="font-size:.7rem">({{len .Tickets}} ticket{{if gt (len .Tickets) 1}}s{{end}})</span>
+                        <a href="/tickets/new?parent={{(index .Tickets 0).Id}}" class="btn btn-tool btn-xs float-right text-info" title="New Job"><i class="fas fa-plus"></i></a>
                     </td>
-                    <td>{{if .Assigned}}{{.Assigned.Name}}{{else}}-{{end}}</td>
-                    <td class="text-sm">{{formatDate .ReceivedAt}}</td>
+                </tr>
+                {{range .Tickets}}
+                <tr class="ticket-child-row">
+                    <td class="pl-4"><a href="/tickets/{{.Id}}" class="text-primary">#{{.Id}}</a></td>
+                    <td class="text-truncate" style="max-width:250px">{{if .IssueDescription}}{{truncate .IssueDescription 50}}{{else}}<span class="text-muted">-</span>{{end}}</td>
+                    <td><span class="badge status-{{.Status}}" style="font-size:.7rem">{{statusLabel .Status}}</span></td>
                     <td>
-                        <a href="/tickets/{{.Id}}" class="btn btn-xs btn-outline-primary">View</a>
+                        {{if .CustomerRepair}}<span class="badge badge-success" style="font-size:.65rem">CR</span>{{end}}
+                        {{if .RmaNumber}}<span class="badge {{if eq .RmaStatus "complete"}}badge-success{{else if eq .RmaStatus "shipped"}}badge-primary{{else if eq .RmaStatus "processing"}}badge-purple{{else if eq .RmaStatus "returned"}}badge-info{{else}}badge-warning{{end}}" style="font-size:.65rem">RMA</span>{{end}}
+                    </td>
+                    <td class="text-sm">{{if .Assigned}}{{.Assigned.Name}}{{else}}<span class="text-muted">-</span>{{end}}</td>
+                    <td class="text-muted" style="font-size:.75rem">{{formatDateTZ .ReceivedAt $.userTimezone}}</td>
+                    <td class="text-right pr-2">
+                        <a href="/tickets/{{.Id}}" class="btn btn-xs btn-outline-primary py-0 px-1" style="font-size:.7rem">View</a>
                         {{if or (eq $.currentUser.Role "super_admin") (eq $.currentUser.Role "admin") (eq $.currentUser.Role "technician")}}
-                        <a href="/tickets/{{.Id}}/edit" class="btn btn-xs btn-outline-secondary">Edit</a>
+                        <a href="/tickets/{{.Id}}/edit" class="btn btn-xs btn-outline-secondary py-0 px-1" style="font-size:.7rem">Edit</a>
                         {{end}}
                     </td>
                 </tr>
+                {{end}}
                 {{else}}
-                <tr><td colspan="9" class="text-center text-muted py-4">No tickets found</td></tr>
+                <tr><td colspan="7" class="text-center text-muted py-4">No tickets found</td></tr>
                 {{end}}
             </tbody>
         </table>
     </div>
+    {{if gt .totalPages 1}}
+    <div class="card-footer clearfix">
+        <ul class="pagination pagination-sm m-0 float-right">
+            {{if gt .page 1}}
+            <li class="page-item"><a class="page-link" href="?page={{minus .page 1}}{{if .filters.status}}&status={{.filters.status}}{{end}}{{if .filters.warranty}}&warranty={{.filters.warranty}}{{end}}{{if .filters.q}}&q={{.filters.q}}{{end}}{{if .filters.assigned}}&assigned={{.filters.assigned}}{{end}}{{if .filters.brand}}&brand={{.filters.brand}}{{end}}">{{t $.lang "previous"}}</a></li>
+            {{end}}
+            {{range seq 1 .totalPages}}
+            <li class="page-item {{if eq . $.page}}active{{end}}"><a class="page-link" href="?page={{.}}{{if $.filters.status}}&status={{$.filters.status}}{{end}}{{if $.filters.warranty}}&warranty={{$.filters.warranty}}{{end}}{{if $.filters.q}}&q={{$.filters.q}}{{end}}{{if $.filters.assigned}}&assigned={{$.filters.assigned}}{{end}}{{if $.filters.brand}}&brand={{$.filters.brand}}{{end}}">{{.}}</a></li>
+            {{end}}
+            {{if lt .page .totalPages}}
+            <li class="page-item"><a class="page-link" href="?page={{add .page 1}}{{if .filters.status}}&status={{.filters.status}}{{end}}{{if .filters.warranty}}&warranty={{.filters.warranty}}{{end}}{{if .filters.q}}&q={{.filters.q}}{{end}}{{if .filters.assigned}}&assigned={{.filters.assigned}}{{end}}{{if .filters.brand}}&brand={{.filters.brand}}{{end}}">{{t $.lang "next"}}</a></li>
+            {{end}}
+        </ul>
+    </div>
+    {{end}}
 </div>
 {{end}}

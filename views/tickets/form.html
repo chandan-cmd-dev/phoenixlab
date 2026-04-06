@@ -5,6 +5,15 @@
 <div class="col-lg-10 mx-auto">
     <form method="POST" action="{{if .ticket}}/tickets/{{.ticket.Id}}{{else}}/tickets{{end}}">
         {{if .ticket}}<input type="hidden" name="version" value="{{.ticket.Version}}">{{end}}
+        {{if .ticket}}{{if .ticket.ParentTicketId}}<input type="hidden" name="parent_ticket_id" value="{{.ticket.ParentTicketId}}">{{end}}{{end}}
+        {{if .prefillLinkedId}}<input type="hidden" name="linked_ticket_id" value="{{.prefillLinkedId}}">{{end}}
+
+        {{if .isNewFromParent}}
+        <div class="alert alert-info">
+            <i class="fas fa-link mr-1"></i>
+            Creating a follow-up ticket from <strong>Ticket #{{.parentTicket.Id}}</strong> (S/N: {{.parentTicket.SerialNumber}}). Device info has been pre-filled.
+        </div>
+        {{end}}
 
         <div class="card card-primary card-outline">
             <div class="card-header"><h3 class="card-title">Device Information</h3></div>
@@ -64,14 +73,12 @@
                             <option value="other" {{if .ticket}}{{if eq .ticket.IssueCategory "other"}}selected{{end}}{{end}}>Other</option>
                         </select>
                     </div>
-                    <div class="col-md-4 form-group">
-                        <label>Priority</label>
-                        <select name="priority" class="form-control">
-                            <option value="normal" {{if .ticket}}{{if eq .ticket.Priority "normal"}}selected{{end}}{{else}}selected{{end}}>Normal</option>
-                            <option value="low" {{if .ticket}}{{if eq .ticket.Priority "low"}}selected{{end}}{{end}}>Low</option>
-                            <option value="high" {{if .ticket}}{{if eq .ticket.Priority "high"}}selected{{end}}{{end}}>High</option>
-                            <option value="critical" {{if .ticket}}{{if eq .ticket.Priority "critical"}}selected{{end}}{{end}}>Critical</option>
-                        </select>
+                    <div class="col-md-4 form-group d-flex align-items-end">
+                        <div class="custom-control custom-checkbox">
+                            <input type="hidden" name="customer_repair" value="false">
+                            <input type="checkbox" name="customer_repair" value="true" id="customer_repair" class="custom-control-input" {{if .ticket}}{{if .ticket.CustomerRepair}}checked{{end}}{{end}}>
+                            <label for="customer_repair" class="custom-control-label">Customer Repair</label>
+                        </div>
                     </div>
                     <div class="col-md-4 form-group">
                         <label>Diagnostic Code</label>
@@ -116,6 +123,33 @@
                     <div class="col-md-4 form-group">
                         <label>PO Number</label>
                         <input type="text" name="po_number" value="{{if .ticket}}{{.ticket.PoNumber}}{{end}}" class="form-control" placeholder="e.g. PO20251218001">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card card-purple card-outline">
+            <div class="card-header"><h3 class="card-title">RMA (Return Merchandise Authorization)</h3></div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4 form-group">
+                        <label>RMA Number</label>
+                        <input type="text" name="rma_number" value="{{if .ticket}}{{.ticket.RmaNumber}}{{end}}" class="form-control" placeholder="e.g. RMA-2026-00123">
+                    </div>
+                    <div class="col-md-4 form-group">
+                        <label>RMA Reference Number</label>
+                        <input type="text" name="rma_ref_number" value="{{if .ticket}}{{.ticket.RmaRefNumber}}{{end}}" class="form-control" placeholder="Manufacturer ref #">
+                    </div>
+                    <div class="col-md-4 form-group">
+                        <label>RMA Status</label>
+                        <select name="rma_status" class="form-control">
+                            <option value="" {{if .ticket}}{{if eq .ticket.RmaStatus ""}}selected{{end}}{{else}}selected{{end}}>N/A</option>
+                            <option value="initiated" {{if .ticket}}{{if eq .ticket.RmaStatus "initiated"}}selected{{end}}{{end}}>Initiated</option>
+                            <option value="shipped" {{if .ticket}}{{if eq .ticket.RmaStatus "shipped"}}selected{{end}}{{end}}>Shipped to Manufacturer</option>
+                            <option value="processing" {{if .ticket}}{{if eq .ticket.RmaStatus "processing"}}selected{{end}}{{end}}>Manufacturer Processing</option>
+                            <option value="returned" {{if .ticket}}{{if eq .ticket.RmaStatus "returned"}}selected{{end}}{{end}}>Returned from Manufacturer</option>
+                            <option value="complete" {{if .ticket}}{{if eq .ticket.RmaStatus "complete"}}selected{{end}}{{end}}>Complete</option>
+                        </select>
                     </div>
                 </div>
             </div>

@@ -41,7 +41,17 @@ func (c *BaseController) loadCurrentUser() {
 	}
 
 	c.currentUser = user
+	if user.Language == "" {
+		user.Language = "en"
+	}
 	c.Data["currentUser"] = user
+	c.Data["lang"] = user.Language
+
+	if tz := c.Ctx.GetCookie("tz"); tz != "" {
+		c.Data["userTimezone"] = tz
+	} else {
+		c.Data["userTimezone"] = "UTC"
+	}
 
 	if user.BranchId > 0 {
 		branch, _ := models.GetAllBranches()

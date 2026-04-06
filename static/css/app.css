@@ -19,5 +19,19 @@
 /* Custom badge color for super_admin */
 .badge-purple { background: #6f42c1; color: #fff; }
 
+/* Ticket list — S/N group header */
+.sn-group-header td {
+    background: #f4f6f9;
+    border-top: 2px solid #dee2e6;
+    border-bottom: none;
+    font-size: .85rem;
+}
+.sn-group-header:first-child td { border-top: none; }
+
+/* Ticket list — child rows indented with left accent */
+.ticket-child-row td { border-top: 1px solid #f0f0f0; }
+.ticket-child-row td:first-child { border-left: 3px solid #007bff; }
+.ticket-child-row:hover td { background: #f8f9fc; }
+
 /* Ensure mx-auto works inside row for centering cards */
 .mx-auto { margin-left: auto !important; margin-right: auto !important; float: none !important; }

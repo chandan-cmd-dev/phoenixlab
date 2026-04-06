@@ -22,6 +22,8 @@ func init() {
 	web.Router("/tickets/:id/delete", &controllers.TicketController{}, "post:Delete")
 	web.Router("/tickets/:id/status", &controllers.TicketController{}, "post:UpdateStatus")
 	web.Router("/tickets/:id/assign", &controllers.TicketController{}, "post:Assign")
+	web.Router("/tickets/:id/workflow/start", &controllers.TicketController{}, "post:StartWorkflow")
+	web.Router("/tickets/:id/workflow/advance", &controllers.TicketController{}, "post:AdvanceWorkflow")
 
 	web.Router("/users", &controllers.UserController{}, "get:List;post:Create")
 	web.Router("/users/new", &controllers.UserController{}, "get:New")

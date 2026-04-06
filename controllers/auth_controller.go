@@ -125,14 +125,19 @@ func (c *AuthController) UpdateProfile() {
 		c.FlashSuccess("Password updated successfully")
 	}
 
+	if lang := c.GetString("language"); lang != "" {
+		user.Language = lang
+	}
+
 	userService := services.UserService{}
-	if err := userService.Update(user, []string{"Name", "Email"}); err != nil {
+	if err := userService.Update(user, []string{"Name", "Email", "Language"}); err != nil {
 		c.FlashError("Failed to update profile: " + err.Error())
 		c.Redirect("/auth/profile", 302)
 		return
 	}
 
 	c.safeSetSession("user_name", user.Name)
+	c.safeSetSession("user_lang", user.Language)
 
 	c.FlashSuccess("Profile updated successfully")
 	c.Redirect("/auth/profile", 302)

@@ -8,9 +8,6 @@ CREATE TABLE IF NOT EXISTS branches (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-INSERT INTO branches (name, code) VALUES 
-    ('Head Office', 'HQ01'),
-    ('Kuala Lumpur', 'KL01'),
-    ('Penang', 'PG02'),
-    ('Johor Bahru', 'JB03')
+INSERT INTO branches (name, code, address, created_at) VALUES 
+    ('Head Office', 'HQ01', 'Newark, DE', NOW())
 ON CONFLICT (code) DO NOTHING;

@@ -24,6 +24,16 @@
                         <input type="email" name="email" value="{{.user.Email}}" required class="form-control">
                     </div>
                 </div>
+                <div class="row">
+                    <div class="col-md-6 form-group">
+                        <label>Language</label>
+                        <select name="language" class="form-control">
+                            <option value="en" {{if eq .user.Language "en"}}selected{{end}}>English</option>
+                            <option value="zh" {{if eq .user.Language "zh"}}selected{{end}}>中文 (Chinese)</option>
+                            <option value="es" {{if eq .user.Language "es"}}selected{{end}}>Español (Spanish)</option>
+                        </select>
+                    </div>
+                </div>
                 <hr>
                 <h6 class="text-muted text-uppercase mb-3">Change Password</h6>
                 <div class="row">
