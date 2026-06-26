@@ -1,14 +1,10 @@
-# ============================================================
-#  WARNING: NEVER run "docker compose down -v" in production.
-#  The -v flag deletes ALL data volumes including the database.
-#  Use "docker compose down" (without -v) or the deploy script.
-# ============================================================
-
 services:
   app:
     build: .
     ports:
       - "8080:8080"
+    env_file:
+      - .env
     environment:
       - BEEGO_RUNMODE=prod
       - DATABASE_URL=postgres://tracker:secret@db:5432/phoenixlab?sslmode=disable
@@ -30,8 +26,7 @@ services:
       POSTGRES_PASSWORD: secret
       POSTGRES_DB: phoenixlab
     volumes:
-      # Bind-mount to host directory — data persists even if volumes are pruned
-      - ./pgdata:/var/lib/postgresql/data
+      - pgdata:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U tracker -d phoenixlab"]
       interval: 5s
@@ -40,3 +35,6 @@ services:
     restart: unless-stopped
     ports:
       - "5432:5432"
+
+volumes:
+  pgdata:

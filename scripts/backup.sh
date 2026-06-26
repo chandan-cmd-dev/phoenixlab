@@ -1,9 +1,4 @@
 #!/usr/bin/env bash
-# ============================================================
-#  Phoenix Lab — Database Backup Script
-#  Usage: ./scripts/backup.sh
-#  Creates a timestamped SQL dump in ./backups/
-# ============================================================
 set -euo pipefail
 
 BACKUP_DIR="$(cd "$(dirname "$0")/.." && pwd)/backups"
@@ -24,7 +19,6 @@ else
     exit 1
 fi
 
-# Keep only last 30 backups
 cd "$BACKUP_DIR"
 ls -1t phoenixlab_*.sql 2>/dev/null | tail -n +31 | xargs -r rm -f
 echo "==> Retained latest 30 backups"

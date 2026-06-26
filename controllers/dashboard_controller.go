@@ -3,7 +3,26 @@ package controllers
 import (
 	"PhoenixLab/models"
 	"PhoenixLab/services"
+	"encoding/json"
+	"html/template"
+	"strings"
 )
+
+func chartJSON(v interface{}) template.JS {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return template.JS("[]")
+	}
+	return template.JS(b)
+}
+
+func titleCase(s string) string {
+	parts := strings.Fields(s)
+	for i, p := range parts {
+		parts[i] = strings.ToUpper(p[:1]) + p[1:]
+	}
+	return strings.Join(parts, " ")
+}
 
 type DashboardController struct {
 	BaseController
@@ -26,7 +45,7 @@ func (c *DashboardController) Index() {
 	filters := map[string]string{"limit": "10"}
 	recentTickets, err := ticketService.GetByBranch(branchScope, filters)
 	if err != nil {
-		recentTickets = []*models.Ticket{} // Empty slice if error
+		recentTickets = []*models.Ticket{}
 	}
 
 	kpiCards := []map[string]interface{}{
@@ -75,6 +94,36 @@ func (c *DashboardController) Index() {
 
 		recentTicketsData = append(recentTicketsData, ticketData)
 	}
+
+	analyticsService := services.AnalyticsService{}
+	monthly, err := analyticsService.GetMonthlyStats(branchScope, 6)
+	if err != nil {
+		monthly = []services.MonthlyStats{}
+	}
+	monthLabels := []string{}
+	monthReceived := []int{}
+	monthResolved := []int{}
+	for _, m := range monthly {
+		monthLabels = append(monthLabels, m.Month)
+		monthReceived = append(monthReceived, m.Received)
+		monthResolved = append(monthResolved, m.Resolved)
+	}
+
+	statusOrder := []string{"open", "diagnosing", "parts_ordered", "part_applied", "in_repair", "qc_check", "resolved", "closed", "on_hold", "cancelled"}
+	statusLabels := []string{}
+	statusCounts := []int{}
+	for _, st := range statusOrder {
+		if stats[st] > 0 {
+			statusLabels = append(statusLabels, titleCase(strings.ReplaceAll(st, "_", " ")))
+			statusCounts = append(statusCounts, stats[st])
+		}
+	}
+
+	c.Data["monthLabels"] = chartJSON(monthLabels)
+	c.Data["monthReceived"] = chartJSON(monthReceived)
+	c.Data["monthResolved"] = chartJSON(monthResolved)
+	c.Data["statusLabels"] = chartJSON(statusLabels)
+	c.Data["statusCounts"] = chartJSON(statusCounts)
 
 	c.Data["kpiCards"] = kpiCards
 	c.Data["recentTickets"] = recentTicketsData

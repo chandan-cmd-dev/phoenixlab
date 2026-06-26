@@ -1,0 +1,121 @@
+{{template "layouts/base.html" .}}
+
+{{define "LayoutContent"}}
+<form method="POST" action="/sheets/{{.conn.Id}}/mapping">
+<input type="hidden" name="col_count" value="{{len .mappings}}">
+
+<div class="row">
+    <div class="col-md-4">
+        <div class="card card-outline card-secondary">
+            <div class="card-header"><h3 class="card-title"><i class="fas fa-cog mr-1"></i>Connection Settings</h3></div>
+            <div class="card-body">
+                <div class="form-group">
+                    <label>Tab</label>
+                    <div class="input-group">
+                        <select name="tab_name" class="form-control">
+                            {{range .tabs}}<option value="{{.}}" {{if eq . $.conn.TabName}}selected{{end}}>{{.}}</option>{{end}}
+                        </select>
+                        <div class="input-group-append">
+                            <a class="btn btn-default" href="/sheets/{{.conn.Id}}/mapping?tab={{.conn.TabName}}" title="Reload this tab"><i class="fas fa-redo"></i></a>
+                        </div>
+                    </div>
+                    <small class="text-muted">Use the reload button after changing the tab to re-suggest mappings.</small>
+                </div>
+                <div class="form-group">
+                    <label>Header Row (0-indexed)</label>
+                    <input type="number" name="header_row" class="form-control" value="{{.headerRow}}" min="0">
+                </div>
+                <div class="form-group">
+                    <label>Brand</label>
+                    <input type="text" name="brand" class="form-control" value="{{.conn.Brand}}">
+                </div>
+                <div class="form-group">
+                    <label>Sync Direction</label>
+                    <select name="sync_direction" class="form-control">
+                        <option value="two_way" {{if eq .conn.SyncDirection "two_way"}}selected{{end}}>Two-way reconcile</option>
+                        <option value="pull" {{if eq .conn.SyncDirection "pull"}}selected{{end}}>Pull only (sheet &rarr; app)</option>
+                        <option value="push" {{if eq .conn.SyncDirection "push"}}selected{{end}}>Push only (app &rarr; sheet)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Identity Key (natural key fields)</label>
+                    {{range .identityOptions}}
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="identity_key" value="{{.Value}}" id="id_{{.Value}}" {{if index $.identitySelectedMap .Value}}checked{{end}}>
+                        <label class="form-check-label" for="id_{{.Value}}">{{.Label}}</label>
+                    </div>
+                    {{end}}
+                </div>
+                <div class="form-group">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="auto_sync_enabled" value="1" id="autoSync" {{if .conn.AutoSyncEnabled}}checked{{end}}>
+                        <label class="form-check-label" for="autoSync">Enable auto-sync</label>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Auto-sync interval (minutes, min 5)</label>
+                    <input type="number" name="sync_interval_minutes" class="form-control" value="{{.conn.SyncIntervalMinutes}}" min="5">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header"><h3 class="card-title"><i class="fas fa-columns mr-1"></i>Column Mapping &mdash; {{.conn.TabName}}</h3></div>
+            <div class="card-body p-0">
+                {{if .mappings}}
+                <table class="table table-sm table-bordered mb-0">
+                    <thead>
+                        <tr>
+                            <th style="width:25%">Sheet Column</th>
+                            <th style="width:25%">Sample</th>
+                            <th style="width:30%">Ticket Field</th>
+                            <th style="width:20%">Transform</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    {{range .mappings}}
+                        <tr>
+                            <td>
+                                <strong>{{if .Header}}{{.Header}}{{else}}(col {{.ColumnIndex}}){{end}}</strong>
+                                <input type="hidden" name="header_{{.ColumnIndex}}" value="{{.Header}}">
+                            </td>
+                            <td class="text-muted"><small>{{index $.firstSample .ColumnIndex}}</small></td>
+                            <td>
+                                {{$target := .TargetField}}
+                                <select name="target_{{.ColumnIndex}}" class="form-control form-control-sm">
+                                    <option value="ignore" {{if .IsIgnored}}selected{{end}}>&mdash; Ignore &mdash;</option>
+                                    {{if .IsCustom}}<option value="{{.TargetField}}" selected>Custom: {{.CustomKey}}</option>{{end}}
+                                    {{range $.fieldCatalog}}
+                                    <option value="{{.Value}}" {{if eq .Value $target}}selected{{end}}>{{.Label}}</option>
+                                    {{end}}
+                                </select>
+                            </td>
+                            <td>
+                                <select name="transform_{{.ColumnIndex}}" class="form-control form-control-sm">
+                                    {{$tr := .Transform}}
+                                    <option value="text" {{if eq $tr "text"}}selected{{end}}>text</option>
+                                    <option value="status" {{if eq $tr "status"}}selected{{end}}>status</option>
+                                    <option value="currency" {{if eq $tr "currency"}}selected{{end}}>currency</option>
+                                    <option value="date" {{if eq $tr "date"}}selected{{end}}>date</option>
+                                    <option value="bool" {{if eq $tr "bool"}}selected{{end}}>bool</option>
+                                </select>
+                            </td>
+                        </tr>
+                    {{end}}
+                    </tbody>
+                </table>
+                {{else}}
+                <div class="p-4 text-muted">No columns detected on this tab/header row.</div>
+                {{end}}
+            </div>
+            <div class="card-footer">
+                <button type="submit" class="btn btn-primary"><i class="fas fa-save mr-1"></i>Save Mapping</button>
+                <a href="/sheets" class="btn btn-default">Cancel</a>
+            </div>
+        </div>
+    </div>
+</div>
+</form>
+{{end}}

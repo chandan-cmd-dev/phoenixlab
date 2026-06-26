@@ -15,7 +15,6 @@ CREATE TABLE IF NOT EXISTS users (
 CREATE INDEX IF NOT EXISTS idx_users_branch ON users(branch_id);
 CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
 
--- Default super_admin (password: changeme123 - CHANGE IMMEDIATELY)
 INSERT INTO users (name, email, password_hash, role, branch_id, created_at, updated_at) VALUES
   ('Super Admin', 'admin@phoenixlab.local',
    '$2a$12$q6MxBh1a7Pwwn4wt.mymmuwCNzYl04KZWKt2XMzvQ7XODacw2cPbq', 'super_admin', 1, NOW(), NOW())

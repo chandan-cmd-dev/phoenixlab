@@ -1,0 +1,101 @@
+{{template "layouts/base.html" .}}
+
+{{define "LayoutContent"}}
+<div class="row">
+    <div class="col-12">
+        <div class="card card-outline card-primary">
+            <div class="card-header d-flex align-items-center">
+                <h3 class="card-title"><i class="fab fa-google mr-1"></i>Google Account</h3>
+                <div class="ml-auto">
+                    {{if .googleConnected}}
+                        <span class="badge badge-success mr-2"><i class="fas fa-check-circle mr-1"></i>Connected{{if .googleEmail}} &mdash; {{.googleEmail}}{{end}}</span>
+                        <form method="POST" action="/oauth/google/disconnect" class="d-inline" onsubmit="return confirm('Disconnect the Google account? Existing connections will stop syncing.');">
+                            <button class="btn btn-sm btn-outline-danger"><i class="fas fa-unlink mr-1"></i>Disconnect</button>
+                        </form>
+                    {{else if .oauthConfigured}}
+                        <a href="/oauth/google/connect" class="btn btn-sm btn-primary"><i class="fab fa-google mr-1"></i>Connect Google</a>
+                    {{else}}
+                        <span class="badge badge-warning">OAuth not configured</span>
+                    {{end}}
+                </div>
+            </div>
+            <div class="card-body">
+                <p class="text-muted mb-0">Connect a Google account once at the app level, then register spreadsheet tabs to sync with tickets. Data is matched by identity, not row position.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex align-items-center">
+                <h3 class="card-title"><i class="fas fa-table mr-1"></i>Sheet Connections</h3>
+                {{if .googleConnected}}
+                <div class="ml-auto">
+                    <a href="/sheets/connect" class="btn btn-sm btn-success"><i class="fas fa-plus mr-1"></i>Connect a Spreadsheet</a>
+                </div>
+                {{end}}
+            </div>
+            <div class="card-body p-0">
+                {{if .connections}}
+                <table class="table table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th>Spreadsheet</th>
+                            <th>Tab</th>
+                            <th>Brand</th>
+                            <th>Branch</th>
+                            <th>Direction</th>
+                            <th>Status</th>
+                            <th>Auto-sync</th>
+                            <th>Last sync</th>
+                            <th>Reviews</th>
+                            <th class="text-right">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    {{range .connections}}
+                        <tr>
+                            <td><strong>{{if .SpreadsheetTitle}}{{.SpreadsheetTitle}}{{else}}{{.SpreadsheetId}}{{end}}</strong></td>
+                            <td>{{.TabName}}</td>
+                            <td>{{.Brand}}</td>
+                            <td>{{if .Branch}}{{.Branch.Name}}{{end}}</td>
+                            <td><span class="badge badge-info">{{statusLabel .SyncDirection}}</span></td>
+                            <td>
+                                {{if eq .Status "mapped"}}<span class="badge badge-success">mapped</span>
+                                {{else}}<span class="badge badge-secondary">{{.Status}}</span>{{end}}
+                            </td>
+                            <td>
+                                {{if .AutoSyncEnabled}}<span class="badge badge-success">on / {{.SyncIntervalMinutes}}m</span>
+                                {{else}}<span class="badge badge-light">off</span>{{end}}
+                                {{if .LastAutoStatus}}<br><small class="text-muted">{{.LastAutoStatus}}</small>{{end}}
+                            </td>
+                            <td><small>{{formatDateTime .LastSyncedAt}}</small></td>
+                            <td>
+                                {{if gt .OpenConflicts 0}}<a href="/sheets/{{.Id}}/conflicts" class="badge badge-danger">{{.OpenConflicts}} conflict</a>{{end}}
+                                {{if gt .OpenAdoptions 0}}<a href="/sheets/{{.Id}}/adoptions" class="badge badge-warning">{{.OpenAdoptions}} adopt</a>{{end}}
+                                {{if and (eq .OpenConflicts 0) (eq .OpenAdoptions 0)}}<span class="text-muted">&mdash;</span>{{end}}
+                            </td>
+                            <td class="text-right text-nowrap">
+                                {{if eq .Status "mapped"}}<a href="/sheets/{{.Id}}/preview" class="btn btn-xs btn-primary" title="Preview / Sync"><i class="fas fa-sync"></i></a>{{end}}
+                                <a href="/sheets/{{.Id}}/mapping" class="btn btn-xs btn-default" title="Mapping"><i class="fas fa-columns"></i></a>
+                                <form method="POST" action="/sheets/{{.Id}}/autosync" class="d-inline">
+                                    <button class="btn btn-xs btn-default" title="Toggle auto-sync"><i class="fas fa-clock"></i></button>
+                                </form>
+                                <form method="POST" action="/sheets/{{.Id}}/delete" class="d-inline" onsubmit="return confirm('Remove this connection? Row links are deleted; tickets are kept.');">
+                                    <button class="btn btn-xs btn-outline-danger" title="Delete"><i class="fas fa-trash"></i></button>
+                                </form>
+                            </td>
+                        </tr>
+                    {{end}}
+                    </tbody>
+                </table>
+                {{else}}
+                <div class="p-4 text-center text-muted">No sheet connections yet.</div>
+                {{end}}
+            </div>
+        </div>
+    </div>
+</div>
+{{end}}

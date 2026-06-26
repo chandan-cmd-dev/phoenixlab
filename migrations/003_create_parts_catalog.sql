@@ -9,7 +9,6 @@ CREATE TABLE IF NOT EXISTS parts_catalog (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Sample parts data
 INSERT INTO parts_catalog (part_number, description, unit_cost, supplier, lead_time_days, created_at) VALUES
     ('LCD-001', '14 inch LCD Panel', 250.00, 'Dell Supplier', 7, NOW()),
     ('BATT-002', '6-cell Laptop Battery', 180.00, 'Battery Pro', 5, NOW()),

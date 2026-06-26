@@ -3,6 +3,7 @@ package main
 import (
 	"PhoenixLab/models"
 	_ "PhoenixLab/routers"
+	"PhoenixLab/services"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -41,6 +42,12 @@ func init() {
 		new(models.OdooSyncLog),
 		new(models.Comment),
 		new(models.TicketWorkflow),
+		new(models.GoogleToken),
+		new(models.SheetConnection),
+		new(models.SheetColumnMapping),
+		new(models.SheetRowLink),
+		new(models.SheetConflict),
+		new(models.SheetAdoption),
 	)
 }
 
@@ -54,18 +61,28 @@ func connectWithRetry(maxAttempts int) error {
 			time.Sleep(3 * time.Second)
 			continue
 		}
-		if err := orm.RunSyncdb("default", false, true); err != nil {
-			log.Printf("Schema sync warning: %v", err)
-		}
 		return nil
 	}
 	return fmt.Errorf("could not connect to database after %d attempts: %w", maxAttempts, lastErr)
 }
 
+// syncSchema is a safety net that creates any model-defined tables/columns not
+// already covered by the SQL migrations. It MUST run AFTER runMigrations:
+// RunSyncdb creates the tables for every registered model, so if it ran first it
+// would make a brand-new database look like an existing one — runMigrations'
+// "is the tickets table already here?" check would then misfire and skip the
+// baseline seed migrations (001-003), leaving a fresh deploy with no admin user
+// or branches. Migrations stay the authoritative schema source; this only fills
+// gaps. force=false means it never drops or rewrites existing tables.
+func syncSchema() {
+	if err := orm.RunSyncdb("default", false, true); err != nil {
+		log.Printf("Schema sync warning: %v", err)
+	}
+}
+
 func runMigrations() {
 	o := orm.NewOrm()
 
-	// Check if schema_migrations table already exists (i.e. migrations ran before)
 	var smCount int
 	o.Raw(`SELECT COUNT(*) FROM information_schema.tables
 		WHERE table_schema = 'public' AND table_name = 'schema_migrations'`).QueryRow(&smCount)
@@ -81,9 +98,6 @@ func runMigrations() {
 		return
 	}
 
-	// If schema_migrations was just created, check if this is an EXISTING production DB
-	// by looking for the tickets table. If it exists, pre-seed schema_migrations with all
-	// migrations that created/altered tables already present so they are SKIPPED.
 	if freshMigrationTable {
 		var ticketsExist int
 		o.Raw(`SELECT COUNT(*) FROM information_schema.tables
@@ -91,8 +105,7 @@ func runMigrations() {
 
 		if ticketsExist > 0 {
 			log.Println("Migration: existing production database detected — pre-seeding schema_migrations")
-			// These migrations created/modified tables that already exist in production.
-			// Mark them as applied so they are never re-run.
+
 			baseline := []string{
 				"001_create_branches.sql",
 				"002_create_users.sql",
@@ -215,7 +228,9 @@ func main() {
 	}
 
 	runMigrations()
+	syncSchema()
 	loadI18n()
+	services.StartScheduler()
 
 	if web.GlobalSessions == nil {
 		var err error

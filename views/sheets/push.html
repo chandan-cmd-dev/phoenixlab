@@ -1,0 +1,25 @@
+{{template "layouts/base.html" .}}
+
+{{define "LayoutContent"}}
+<div class="row">
+<div class="col-lg-8 mx-auto">
+    <div class="card card-outline card-primary">
+        <div class="card-header"><h3 class="card-title"><i class="fas fa-upload mr-1"></i>Push to Sheet &mdash; {{.conn.TabName}}</h3></div>
+        <div class="card-body">
+            <p>This writes ticket values back into the sheet for rows that are already linked. Unlinked rows are skipped &mdash; run an import first.</p>
+            <div class="row text-center">
+                <div class="col"><div class="description-block"><h2 class="text-primary">{{.preview.Updates}}</h2><span class="description-text">WILL PUSH</span></div></div>
+                <div class="col"><div class="description-block"><h2 class="text-muted">{{.preview.Skipped}}</h2><span class="description-text">SKIPPED (unlinked)</span></div></div>
+                <div class="col"><div class="description-block"><h2>{{.preview.Total}}</h2><span class="description-text">TOTAL ROWS</span></div></div>
+            </div>
+        </div>
+        <div class="card-footer">
+            <form method="POST" action="/sheets/{{.conn.Id}}/push" class="d-inline" onsubmit="return confirm('Write these values into the Google Sheet?');">
+                <button class="btn btn-primary"><i class="fas fa-upload mr-1"></i>Push Now</button>
+            </form>
+            <a href="/sheets/{{.conn.Id}}/preview" class="btn btn-default">Cancel</a>
+        </div>
+    </div>
+</div>
+</div>
+{{end}}

@@ -1,4 +1,3 @@
-/* Status badge styles (AdminLTE / Bootstrap 4) */
 .badge.status-open           { background: #007bff; color: #fff; }
 .badge.status-diagnosing     { background: #ffc107; color: #333; }
 .badge.status-parts_ordered  { background: #6f42c1; color: #fff; }
@@ -10,16 +9,13 @@
 .badge.status-on_hold        { background: #e0a800; color: #333; }
 .badge.status-cancelled      { background: #dc3545; color: #fff; }
 
-/* Priority row indicators */
 .priority-critical { border-left: 3px solid #dc3545; }
 .priority-high     { border-left: 3px solid #fd7e14; }
 .priority-normal   { border-left: 3px solid #007bff; }
 .priority-low      { border-left: 3px solid #6c757d; }
 
-/* Custom badge color for super_admin */
 .badge-purple { background: #6f42c1; color: #fff; }
 
-/* Ticket list — S/N group header */
 .sn-group-header td {
     background: #f4f6f9;
     border-top: 2px solid #dee2e6;
@@ -28,10 +24,8 @@
 }
 .sn-group-header:first-child td { border-top: none; }
 
-/* Ticket list — child rows indented with left accent */
 .ticket-child-row td { border-top: 1px solid #f0f0f0; }
 .ticket-child-row td:first-child { border-left: 3px solid #007bff; }
 .ticket-child-row:hover td { background: #f8f9fc; }
 
-/* Ensure mx-auto works inside row for centering cards */
 .mx-auto { margin-left: auto !important; margin-right: auto !important; float: none !important; }

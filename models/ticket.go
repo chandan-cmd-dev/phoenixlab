@@ -1,11 +1,13 @@
 package models
 
 import (
+	"encoding/json"
 	"time"
 )
 
 type WarrantyStatus string
 type TicketStatus string
+
 const (
 	WarrantyIn       WarrantyStatus = "in_warranty"
 	WarrantyOut      WarrantyStatus = "out_of_warranty"
@@ -72,14 +74,15 @@ type Ticket struct {
 	CreatedBy            int       `orm:"column(created_by)" json:"created_by"`
 	Version              int       `orm:"default(1)" json:"version" form:"version"`
 	Notes                string    `orm:"null;type(text)" json:"notes" form:"notes"`
+	CustomFields         string    `orm:"null;type(jsonb)" json:"custom_fields"`
 	CreatedAt            time.Time `orm:"auto_now_add;type(timestamptz)" json:"created_at"`
 	UpdatedAt            time.Time `orm:"auto_now;type(timestamptz)" json:"updated_at"`
 
-	Branch       *Branch  `orm:"-" json:"branch,omitempty"`
-	Assigned     *User    `orm:"-" json:"assigned_user,omitempty"`
-	Creator      *User    `orm:"-" json:"creator,omitempty"`
-	ParentTicket *Ticket  `orm:"-" json:"parent_ticket,omitempty"`
-	LinkedTicket *Ticket  `orm:"-" json:"linked_ticket,omitempty"`
+	Branch       *Branch `orm:"-" json:"branch,omitempty"`
+	Assigned     *User   `orm:"-" json:"assigned_user,omitempty"`
+	Creator      *User   `orm:"-" json:"creator,omitempty"`
+	ParentTicket *Ticket `orm:"-" json:"parent_ticket,omitempty"`
+	LinkedTicket *Ticket `orm:"-" json:"linked_ticket,omitempty"`
 }
 
 func (t *Ticket) TableName() string {
@@ -117,6 +120,29 @@ func (t *Ticket) GetAllowedTransitions() []string {
 		return allowed
 	}
 	return nil
+}
+
+// GetCustomFields decodes the JSON CustomFields bag into a map. It never
+// returns nil.
+func (t *Ticket) GetCustomFields() map[string]string {
+	m := make(map[string]string)
+	if t.CustomFields == "" {
+		return m
+	}
+	_ = json.Unmarshal([]byte(t.CustomFields), &m)
+	if m == nil {
+		m = make(map[string]string)
+	}
+	return m
+}
+
+// SetCustomField merges a single key into the CustomFields bag.
+func (t *Ticket) SetCustomField(key, value string) {
+	m := t.GetCustomFields()
+	m[key] = value
+	if b, err := json.Marshal(m); err == nil {
+		t.CustomFields = string(b)
+	}
 }
 
 func (t *Ticket) CanTransitionTo(newStatus string) bool {

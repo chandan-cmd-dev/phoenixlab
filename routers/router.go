@@ -17,6 +17,7 @@ func init() {
 
 	web.Router("/tickets", &controllers.TicketController{}, "get:List;post:Create")
 	web.Router("/tickets/new", &controllers.TicketController{}, "get:New")
+	web.Router("/tickets/bulk-delete", &controllers.TicketController{}, "post:BulkDelete")
 	web.Router("/tickets/:id", &controllers.TicketController{}, "get:Detail;post:Update")
 	web.Router("/tickets/:id/edit", &controllers.TicketController{}, "get:Edit")
 	web.Router("/tickets/:id/delete", &controllers.TicketController{}, "post:Delete")
@@ -39,6 +40,22 @@ func init() {
 	web.Router("/import", &controllers.ImportController{}, "get:ShowImport;post:DoImport")
 
 	web.Router("/analytics", &controllers.AnalyticsController{}, "get:Index")
+
+	web.Router("/oauth/google/connect", &controllers.OAuthController{}, "get:GoogleConnect")
+	web.Router("/oauth/google/callback", &controllers.OAuthController{}, "get:GoogleCallback")
+	web.Router("/oauth/google/disconnect", &controllers.OAuthController{}, "post:GoogleDisconnect")
+
+	web.Router("/sheets", &controllers.SheetController{}, "get:List")
+	web.Router("/sheets/connect", &controllers.SheetController{}, "get:Connect;post:DoConnect")
+	web.Router("/sheets/:id/mapping", &controllers.SheetController{}, "get:Mapping;post:SaveMapping")
+	web.Router("/sheets/:id/preview", &controllers.SheetController{}, "get:Preview")
+	web.Router("/sheets/:id/import", &controllers.SheetController{}, "post:DoImport")
+	web.Router("/sheets/:id/push", &controllers.SheetController{}, "get:PushPreview;post:DoPush")
+	web.Router("/sheets/:id/reconcile", &controllers.SheetController{}, "post:DoReconcile")
+	web.Router("/sheets/:id/conflicts", &controllers.SheetController{}, "get:Conflicts;post:ResolveConflicts")
+	web.Router("/sheets/:id/adoptions", &controllers.SheetController{}, "get:Adoptions;post:ResolveAdoptions")
+	web.Router("/sheets/:id/autosync", &controllers.SheetController{}, "post:ToggleAutoSync")
+	web.Router("/sheets/:id/delete", &controllers.SheetController{}, "post:Delete")
 
 	web.Router("/", &controllers.DashboardController{}, "get:Index")
 }

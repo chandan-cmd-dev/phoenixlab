@@ -407,6 +407,36 @@ func (c *TicketController) Delete() {
 	c.Redirect("/tickets", 302)
 }
 
+func (c *TicketController) BulkDelete() {
+	c.RequireRole("super_admin")
+
+	ids := c.GetStrings("ticket_ids")
+	if len(ids) == 0 {
+		c.FlashError("No tickets selected")
+		c.Redirect("/tickets", 302)
+		return
+	}
+
+	ticketService := services.TicketService{}
+	deleted := 0
+	for _, s := range ids {
+		id, err := strconv.Atoi(s)
+		if err != nil {
+			continue
+		}
+		if err := ticketService.Delete(id, c.GetCurrentUser().Id); err == nil {
+			deleted++
+		}
+	}
+
+	if deleted == 0 {
+		c.FlashError("No tickets were deleted")
+	} else {
+		c.FlashSuccess("Deleted " + strconv.Itoa(deleted) + " ticket(s)")
+	}
+	c.Redirect("/tickets", 302)
+}
+
 func (c *TicketController) StartWorkflow() {
 	c.RequireRole("technician", "admin", "super_admin")
 

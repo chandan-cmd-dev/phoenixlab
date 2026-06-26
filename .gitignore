@@ -1,20 +1,14 @@
-# Database data (bind-mount) — NEVER commit or delete this in production
 pgdata/
 
-# Database backups
 backups/
 
-# Application logs
 logs/
 
-# Environment files with secrets
 .env
 
-# Go build artifacts
 main
 *.exe
 
-# IDE
 .idea/
 .vscode/
 *.swp

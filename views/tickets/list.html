@@ -1,6 +1,7 @@
 {{template "layouts/base.html" .}}
 
 {{define "LayoutContent"}}
+{{$canDelete := eq .currentUser.Role "super_admin"}}
 <div class="card card-outline card-primary">
     <div class="card-header">
         <h3 class="card-title">Filter Tickets</h3>
@@ -77,14 +78,20 @@
 </div>
 
 <div class="card">
-    <div class="card-header">
+    <div class="card-header d-flex align-items-center">
         <span class="text-muted text-sm">{{.totalCount}} tickets found</span>
+        {{if $canDelete}}
+        <button type="button" id="pl-bulk-delete" class="btn btn-outline-danger btn-sm ml-auto" onclick="plBulkDelete()" disabled>
+            <i class="fas fa-trash mr-1"></i>Delete Selected (<span id="pl-sel-count">0</span>)
+        </button>
+        {{end}}
     </div>
     <div class="card-body table-responsive p-0">
         <table class="table table-sm table-hover mb-0" style="font-size:.85rem">
             <thead>
                 <tr class="text-uppercase text-muted" style="font-size:.7rem; letter-spacing:.05em">
-                    <th style="width:60px" class="pl-3">#</th>
+                    {{if $canDelete}}<th style="width:30px" class="pl-3"><input type="checkbox" id="pl-select-all" title="Select all"></th>{{end}}
+                    <th style="width:60px" {{if not $canDelete}}class="pl-3"{{end}}>#</th>
                     <th>Issue</th>
                     <th style="width:100px">Status</th>
                     <th style="width:150px">Tags</th>
@@ -96,7 +103,7 @@
             <tbody>
                 {{range .groups}}
                 <tr class="sn-group-header">
-                    <td colspan="7" class="py-1 pl-3">
+                    <td colspan="{{if $canDelete}}8{{else}}7{{end}}" class="py-1 pl-3">
                         <i class="fas fa-laptop text-muted mr-1" style="font-size:.75rem"></i>
                         <strong class="mr-2">{{.SerialNumber}}</strong>
                         {{if .Brand}}<small class="text-muted mr-2">{{.Brand}} {{.Model}}</small>{{end}}
@@ -109,6 +116,7 @@
                 </tr>
                 {{range .Tickets}}
                 <tr class="ticket-child-row">
+                    {{if $canDelete}}<td class="pl-3"><input type="checkbox" class="ticket-select" value="{{.Id}}"></td>{{end}}
                     <td class="pl-4"><a href="/tickets/{{.Id}}" class="text-primary">#{{.Id}}</a></td>
                     <td class="text-truncate" style="max-width:250px">{{if .IssueDescription}}{{truncate .IssueDescription 50}}{{else}}<span class="text-muted">-</span>{{end}}</td>
                     <td><span class="badge status-{{.Status}}" style="font-size:.7rem">{{statusLabel .Status}}</span></td>
@@ -123,11 +131,16 @@
                         {{if or (eq $.currentUser.Role "super_admin") (eq $.currentUser.Role "admin") (eq $.currentUser.Role "technician")}}
                         <a href="/tickets/{{.Id}}/edit" class="btn btn-xs btn-outline-secondary py-0 px-1" style="font-size:.7rem">Edit</a>
                         {{end}}
+                        {{if $canDelete}}
+                        <form method="POST" action="/tickets/{{.Id}}/delete" class="d-inline" onsubmit="return confirm('Delete ticket #{{.Id}} permanently?')">
+                            <button type="submit" class="btn btn-xs btn-outline-danger py-0 px-1" style="font-size:.7rem" title="Delete"><i class="fas fa-trash"></i></button>
+                        </form>
+                        {{end}}
                     </td>
                 </tr>
                 {{end}}
                 {{else}}
-                <tr><td colspan="7" class="text-center text-muted py-4">No tickets found</td></tr>
+                <tr><td colspan="{{if $canDelete}}8{{else}}7{{end}}" class="text-center text-muted py-4">No tickets found</td></tr>
                 {{end}}
             </tbody>
         </table>
@@ -148,4 +161,45 @@
     </div>
     {{end}}
 </div>
+{{if $canDelete}}
+<script>
+(function(){
+    function selected(){ return document.querySelectorAll('.ticket-select:checked'); }
+    function refresh(){
+        var n = selected().length;
+        var btn = document.getElementById('pl-bulk-delete');
+        var cnt = document.getElementById('pl-sel-count');
+        if(cnt) cnt.textContent = n;
+        if(btn) btn.disabled = (n === 0);
+        var all = document.getElementById('pl-select-all');
+        var boxes = document.querySelectorAll('.ticket-select');
+        if(all) all.checked = (boxes.length > 0 && n === boxes.length);
+    }
+    document.addEventListener('change', function(e){
+        if(e.target && e.target.id === 'pl-select-all'){
+            document.querySelectorAll('.ticket-select').forEach(function(c){ c.checked = e.target.checked; });
+        }
+        if(e.target && (e.target.classList.contains('ticket-select') || e.target.id === 'pl-select-all')){
+            refresh();
+        }
+    });
+    window.plBulkDelete = function(){
+        var ids = Array.prototype.slice.call(selected()).map(function(c){ return c.value; });
+        if(ids.length === 0){ return; }
+        if(!confirm('Delete ' + ids.length + ' selected ticket(s) permanently?')){ return; }
+        var f = document.createElement('form');
+        f.method = 'POST';
+        f.action = '/tickets/bulk-delete';
+        ids.forEach(function(id){
+            var i = document.createElement('input');
+            i.type = 'hidden'; i.name = 'ticket_ids'; i.value = id;
+            f.appendChild(i);
+        });
+        document.body.appendChild(f);
+        f.submit();
+    };
+    refresh();
+})();
+</script>
+{{end}}
 {{end}}
