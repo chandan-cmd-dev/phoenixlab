@@ -21,8 +21,8 @@
             <div class="card-header">
                 <h3 class="card-title"><code class="text-lg">{{.ticket.SerialNumber}}</code></h3>
                 <div class="card-tools">
-                    <span class="badge status-{{.ticket.Status}} mr-1">{{statusLabel .ticket.Status}}</span>
-                    {{if .ticket.CustomerRepair}}<span class="badge badge-success">Customer Repair</span>{{end}}
+                    <span class="badge status-{{.ticket.Status}} mr-1">{{td $.lang .ticket.Status}}</span>
+                    {{if .ticket.CustomerRepair}}<span class="badge badge-success">{{t $.lang "customer_repair"}}</span>{{end}}
                 </div>
             </div>
             <div class="card-body">
@@ -32,7 +32,7 @@
                     <div id="status-buttons">
                         {{$id := .ticket.Id}}
                         {{range $s := .ticket.GetAllowedTransitions}}
-                        <button onclick="updateStatus({{$id}}, '{{$s}}')" class="btn btn-outline-secondary btn-xs mb-1">{{statusLabel $s}}</button>
+                        <button onclick="updateStatus({{$id}}, '{{$s}}')" class="btn btn-outline-secondary btn-xs mb-1">{{td $.lang $s}}</button>
                         {{end}}
                     </div>
                 </div>
@@ -43,8 +43,8 @@
             <div class="card-header"><h3 class="card-title">Issue Details</h3></div>
             <div class="card-body">
                 <div class="row text-sm">
-                    <div class="col-6 mb-2"><strong>Category:</strong> {{if .ticket.IssueCategory}}{{statusLabel .ticket.IssueCategory}}{{else}}-{{end}}</div>
-                    <div class="col-6 mb-2"><strong>Warranty:</strong> {{statusLabel .ticket.WarrantyStatus}}</div>
+                    <div class="col-6 mb-2"><strong>{{t $.lang "category"}}:</strong> {{if .ticket.IssueCategory}}{{td $.lang .ticket.IssueCategory}}{{else}}-{{end}}</div>
+                    <div class="col-6 mb-2"><strong>{{t $.lang "warranty"}}:</strong> {{td $.lang .ticket.WarrantyStatus}}</div>
                     <div class="col-6 mb-2"><strong>IR / Product #:</strong> <code>{{if .ticket.IrNumber}}{{.ticket.IrNumber}}{{else}}-{{end}}</code></div>
                     <div class="col-6 mb-2"><strong>UPC:</strong> <code>{{if .ticket.Upc}}{{.ticket.Upc}}{{else}}-{{end}}</code></div>
                     <div class="col-6 mb-2"><strong>Diagnostic Code:</strong> {{if .ticket.DiagnosticCode}}{{.ticket.DiagnosticCode}}{{else}}-{{end}}</div>
@@ -86,7 +86,7 @@
                     <div class="col-6 mb-2"><i class="fas {{if .ticket.PartArrivedFixed}}fa-check-circle text-success{{else}}fa-times-circle text-muted{{end}} mr-1"></i>Part arrived &amp; fixed</div>
                     <div class="col-6 mb-2"><strong>Defective Part Shipped:</strong>
                         <span class="{{if eq .ticket.DefectivePartShipped "YES"}}text-success font-weight-bold{{else if eq .ticket.DefectivePartShipped "NO"}}text-danger{{else}}text-muted{{end}}">
-                            {{if .ticket.DefectivePartShipped}}{{.ticket.DefectivePartShipped}}{{else}}-{{end}}
+                            {{if .ticket.DefectivePartShipped}}{{td $.lang .ticket.DefectivePartShipped}}{{else}}-{{end}}
                         </span>
                     </div>
                     <div class="col-6 mb-2"><i class="fas {{if .ticket.CaseFinished}}fa-check-circle text-success{{else}}fa-times-circle text-muted{{end}} mr-1"></i>Case finished</div>
@@ -149,26 +149,21 @@
             <div class="card-header">
                 <h3 class="card-title"><i class="fas fa-undo-alt mr-1"></i>RMA</h3>
                 <div class="card-tools">
-                    {{if eq .ticket.RmaStatus "complete"}}<span class="badge badge-success">Complete</span>
-                    {{else if eq .ticket.RmaStatus "returned"}}<span class="badge badge-info">Returned</span>
-                    {{else if eq .ticket.RmaStatus "processing"}}<span class="badge" style="background:#6f42c1;color:#fff">Processing</span>
-                    {{else if eq .ticket.RmaStatus "shipped"}}<span class="badge badge-primary">Shipped</span>
-                    {{else if eq .ticket.RmaStatus "initiated"}}<span class="badge badge-warning">Initiated</span>
-                    {{else}}<span class="badge badge-secondary">Pending</span>{{end}}
+                    {{if eq .ticket.RmaStatus "complete"}}<span class="badge badge-success">{{td $.lang .ticket.RmaStatus}}</span>
+                    {{else if eq .ticket.RmaStatus "returned"}}<span class="badge badge-info">{{td $.lang .ticket.RmaStatus}}</span>
+                    {{else if eq .ticket.RmaStatus "processing"}}<span class="badge" style="background:#6f42c1;color:#fff">{{td $.lang .ticket.RmaStatus}}</span>
+                    {{else if eq .ticket.RmaStatus "shipped"}}<span class="badge badge-primary">{{td $.lang .ticket.RmaStatus}}</span>
+                    {{else if eq .ticket.RmaStatus "initiated"}}<span class="badge badge-warning">{{td $.lang .ticket.RmaStatus}}</span>
+                    {{else}}<span class="badge badge-secondary">{{t $.lang "pending"}}</span>{{end}}
                 </div>
             </div>
             <div class="card-body text-sm">
                 <dl class="mb-0">
                     <dt>RMA Number</dt><dd><code>{{.ticket.RmaNumber}}</code></dd>
                     {{if .ticket.RmaRefNumber}}<dt>Reference Number</dt><dd><code>{{.ticket.RmaRefNumber}}</code></dd>{{end}}
-                    <dt>Status</dt>
+                    <dt>{{t $.lang "status"}}</dt>
                     <dd>
-                        {{if eq .ticket.RmaStatus "complete"}}Complete
-                        {{else if eq .ticket.RmaStatus "returned"}}Returned from Manufacturer
-                        {{else if eq .ticket.RmaStatus "processing"}}Manufacturer Processing
-                        {{else if eq .ticket.RmaStatus "shipped"}}Shipped to Manufacturer
-                        {{else if eq .ticket.RmaStatus "initiated"}}Initiated
-                        {{else}}Pending{{end}}
+                        {{if .ticket.RmaStatus}}{{td $.lang .ticket.RmaStatus}}{{else}}{{t $.lang "pending"}}{{end}}
                     </dd>
                 </dl>
             </div>
@@ -281,7 +276,7 @@
                     <tr>
                         <td><a href="/tickets/{{.Id}}">#{{.Id}}</a></td>
                         <td>{{if .IssueDescription}}{{truncate .IssueDescription 30}}{{else}}-{{end}}</td>
-                        <td><span class="badge status-{{.Status}}">{{statusLabel .Status}}</span></td>
+                        <td><span class="badge status-{{.Status}}">{{td $.lang .Status}}</span></td>
                     </tr>
                     {{end}}
                 </table>

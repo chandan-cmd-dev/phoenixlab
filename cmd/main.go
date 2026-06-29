@@ -12,6 +12,7 @@ import (
 	"sort"
 	"strings"
 	"time"
+	"unicode"
 
 	"github.com/beego/beego/v2/client/orm"
 	"github.com/beego/beego/v2/server/web"
@@ -66,14 +67,6 @@ func connectWithRetry(maxAttempts int) error {
 	return fmt.Errorf("could not connect to database after %d attempts: %w", maxAttempts, lastErr)
 }
 
-// syncSchema is a safety net that creates any model-defined tables/columns not
-// already covered by the SQL migrations. It MUST run AFTER runMigrations:
-// RunSyncdb creates the tables for every registered model, so if it ran first it
-// would make a brand-new database look like an existing one — runMigrations'
-// "is the tickets table already here?" check would then misfire and skip the
-// baseline seed migrations (001-003), leaving a fresh deploy with no admin user
-// or branches. Migrations stay the authoritative schema source; this only fills
-// gaps. force=false means it never drops or rewrites existing tables.
 func syncSchema() {
 	if err := orm.RunSyncdb("default", false, true); err != nil {
 		log.Printf("Schema sync warning: %v", err)
@@ -222,6 +215,39 @@ func t(lang, key string) string {
 	return key
 }
 
+func i18nKey(value string) string {
+	r := strings.NewReplacer(" ", "_", "-", "_", "/", "_", ".", "_")
+	return r.Replace(strings.ToLower(strings.TrimSpace(value)))
+}
+
+func humanizeLabel(value string) string {
+	words := strings.Fields(strings.ReplaceAll(value, "_", " "))
+	for i, w := range words {
+		runes := []rune(w)
+		runes[0] = unicode.ToUpper(runes[0])
+		words[i] = string(runes)
+	}
+	return strings.Join(words, " ")
+}
+
+func td(lang, value string) string {
+	if strings.TrimSpace(value) == "" {
+		return ""
+	}
+	key := i18nKey(value)
+	if m, ok := i18nData[lang]; ok {
+		if v, ok := m[key]; ok {
+			return v
+		}
+	}
+	if m, ok := i18nData["en"]; ok {
+		if v, ok := m[key]; ok {
+			return v
+		}
+	}
+	return humanizeLabel(value)
+}
+
 func main() {
 	if err := connectWithRetry(10); err != nil {
 		log.Fatalf("Fatal: %v", err)
@@ -346,6 +372,8 @@ func main() {
 	})
 
 	web.AddFuncMap("t", t)
+
+	web.AddFuncMap("td", td)
 
 	web.AddFuncMap("wfStepLabel", func(step string) string {
 		if label, ok := models.WorkflowStepLabels[step]; ok {

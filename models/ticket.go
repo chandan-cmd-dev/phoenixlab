@@ -122,8 +122,6 @@ func (t *Ticket) GetAllowedTransitions() []string {
 	return nil
 }
 
-// GetCustomFields decodes the JSON CustomFields bag into a map. It never
-// returns nil.
 func (t *Ticket) GetCustomFields() map[string]string {
 	m := make(map[string]string)
 	if t.CustomFields == "" {
@@ -136,7 +134,6 @@ func (t *Ticket) GetCustomFields() map[string]string {
 	return m
 }
 
-// SetCustomField merges a single key into the CustomFields bag.
 func (t *Ticket) SetCustomField(key, value string) {
 	m := t.GetCustomFields()
 	m[key] = value

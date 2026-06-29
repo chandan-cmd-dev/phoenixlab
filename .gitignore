@@ -13,3 +13,5 @@ main
 .vscode/
 *.swp
 *.swo
+
+.DS_Store

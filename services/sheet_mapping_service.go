@@ -10,15 +10,12 @@ import (
 
 type SheetMappingService struct{}
 
-// FieldOption is a selectable mapping target for the mapping UI.
 type FieldOption struct {
 	Value     string
 	Label     string
 	Transform string
 }
 
-// logicalKeyToField maps the import_service logical column keys to real Ticket
-// struct field names.
 var logicalKeyToField = map[string]string{
 	"sn":                "SerialNumber",
 	"date":              "ReceivedAt",
@@ -53,7 +50,6 @@ var dateFields = map[string]bool{
 	"ReceivedAt": true, "ResolvedAt": true, "DueDate": true,
 }
 
-// FieldCatalog lists the ticket fields that may be chosen as mapping targets.
 func (s *SheetMappingService) FieldCatalog() []FieldOption {
 	fields := []FieldOption{
 		{"SerialNumber", "Serial Number", "text"},
@@ -88,7 +84,6 @@ func (s *SheetMappingService) FieldCatalog() []FieldOption {
 	return fields
 }
 
-// IdentityKeyOptions are the fields offered as identity-key choices.
 func (s *SheetMappingService) IdentityKeyOptions() []FieldOption {
 	return []FieldOption{
 		{"SerialNumber", "Serial Number", "text"},
@@ -114,8 +109,6 @@ func transformFor(field string) string {
 	}
 }
 
-// DetectHeaderRow finds the 0-indexed header row (looks for SN/serial/date),
-// falling back to row 0.
 func (s *SheetMappingService) DetectHeaderRow(rows [][]string) int {
 	for i := 0; i < len(rows) && i < 5; i++ {
 		for _, cell := range rows[i] {
@@ -128,8 +121,6 @@ func (s *SheetMappingService) DetectHeaderRow(rows [][]string) int {
 	return 0
 }
 
-// SuggestMapping auto-maps headers to ticket fields using the brand-aware
-// keyword matcher from import_service. Unmatched columns become custom fields.
 func (s *SheetMappingService) SuggestMapping(headers []string, brand string) []*models.SheetColumnMapping {
 	if brand == "" {
 		brand = "Other"
@@ -171,7 +162,6 @@ func (s *SheetMappingService) SuggestMapping(headers []string, brand string) []*
 	return mappings
 }
 
-// SaveMapping replaces all mappings for a connection.
 func (s *SheetMappingService) SaveMapping(connID int, mappings []*models.SheetColumnMapping) error {
 	o := orm.NewOrm()
 	if _, err := o.Raw("DELETE FROM sheet_column_mappings WHERE connection_id = ?", connID).Exec(); err != nil {

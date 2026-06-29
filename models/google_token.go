@@ -4,8 +4,6 @@ import (
 	"time"
 )
 
-// GoogleToken stores the single app-level OAuth token used to talk to the
-// Google Sheets API. The OAuth service keeps exactly one row in this table.
 type GoogleToken struct {
 	Id           int       `orm:"auto;pk" json:"id"`
 	AccessToken  string    `orm:"type(text)" json:"-"`

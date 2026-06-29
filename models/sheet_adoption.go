@@ -4,9 +4,6 @@ import (
 	"time"
 )
 
-// SheetAdoption is a sheet row whose identity matched multiple candidate
-// tickets (ambiguous). It is queued for human review; RowDataJson stashes the
-// parsed row so the chosen action can be applied later.
 type SheetAdoption struct {
 	Id             int       `orm:"auto;pk" json:"id"`
 	ConnectionId   int       `orm:"column(connection_id)" json:"connection_id"`

@@ -4,8 +4,6 @@ import (
 	"time"
 )
 
-// SheetConflict records a single mapped field where, since the baseline, BOTH
-// the sheet and the DB changed to different values.
 type SheetConflict struct {
 	Id            int       `orm:"auto;pk" json:"id"`
 	ConnectionId  int       `orm:"column(connection_id)" json:"connection_id"`

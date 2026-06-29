@@ -3,8 +3,8 @@
 {{define "LayoutContent"}}
 <div class="row">
 <div class="col-lg-10 mx-auto">
-    <form method="POST" action="{{if .ticket}}/tickets/{{.ticket.Id}}{{else}}/tickets{{end}}">
-        {{if .ticket}}<input type="hidden" name="version" value="{{.ticket.Version}}">{{end}}
+    <form method="POST" action="{{if and .ticket .ticket.Id}}/tickets/{{.ticket.Id}}{{else}}/tickets{{end}}">
+        {{if and .ticket .ticket.Id}}<input type="hidden" name="version" value="{{.ticket.Version}}">{{end}}
         {{if .ticket}}{{if .ticket.ParentTicketId}}<input type="hidden" name="parent_ticket_id" value="{{.ticket.ParentTicketId}}">{{end}}{{end}}
         {{if .prefillLinkedId}}<input type="hidden" name="linked_ticket_id" value="{{.prefillLinkedId}}">{{end}}
 
@@ -48,9 +48,9 @@
                     <div class="col-md-4 form-group">
                         <label>Warranty Status</label>
                         <select name="warranty_status" class="form-control">
-                            <option value="in_warranty" {{if .ticket}}{{if eq .ticket.WarrantyStatus "in_warranty"}}selected{{end}}{{end}}>In Warranty</option>
-                            <option value="out_of_warranty" {{if .ticket}}{{if eq .ticket.WarrantyStatus "out_of_warranty"}}selected{{end}}{{end}}>Out of Warranty</option>
-                            <option value="extended_warranty" {{if .ticket}}{{if eq .ticket.WarrantyStatus "extended_warranty"}}selected{{end}}{{end}}>Extended Warranty</option>
+                            <option value="in_warranty" {{if .ticket}}{{if eq .ticket.WarrantyStatus "in_warranty"}}selected{{end}}{{end}}>{{td $.lang "in_warranty"}}</option>
+                            <option value="out_of_warranty" {{if .ticket}}{{if eq .ticket.WarrantyStatus "out_of_warranty"}}selected{{end}}{{end}}>{{td $.lang "out_of_warranty"}}</option>
+                            <option value="extended_warranty" {{if .ticket}}{{if eq .ticket.WarrantyStatus "extended_warranty"}}selected{{end}}{{end}}>{{td $.lang "extended_warranty"}}</option>
                         </select>
                     </div>
                 </div>
@@ -65,12 +65,12 @@
                         <label>Issue Category</label>
                         <select name="issue_category" class="form-control">
                             <option value="">Select category</option>
-                            <option value="hardware" {{if .ticket}}{{if eq .ticket.IssueCategory "hardware"}}selected{{end}}{{end}}>Hardware</option>
-                            <option value="software" {{if .ticket}}{{if eq .ticket.IssueCategory "software"}}selected{{end}}{{end}}>Software</option>
-                            <option value="display" {{if .ticket}}{{if eq .ticket.IssueCategory "display"}}selected{{end}}{{end}}>Display</option>
-                            <option value="battery" {{if .ticket}}{{if eq .ticket.IssueCategory "battery"}}selected{{end}}{{end}}>Battery</option>
-                            <option value="keyboard" {{if .ticket}}{{if eq .ticket.IssueCategory "keyboard"}}selected{{end}}{{end}}>Keyboard</option>
-                            <option value="other" {{if .ticket}}{{if eq .ticket.IssueCategory "other"}}selected{{end}}{{end}}>Other</option>
+                            <option value="hardware" {{if .ticket}}{{if eq .ticket.IssueCategory "hardware"}}selected{{end}}{{end}}>{{td $.lang "hardware"}}</option>
+                            <option value="software" {{if .ticket}}{{if eq .ticket.IssueCategory "software"}}selected{{end}}{{end}}>{{td $.lang "software"}}</option>
+                            <option value="display" {{if .ticket}}{{if eq .ticket.IssueCategory "display"}}selected{{end}}{{end}}>{{td $.lang "display"}}</option>
+                            <option value="battery" {{if .ticket}}{{if eq .ticket.IssueCategory "battery"}}selected{{end}}{{end}}>{{td $.lang "battery"}}</option>
+                            <option value="keyboard" {{if .ticket}}{{if eq .ticket.IssueCategory "keyboard"}}selected{{end}}{{end}}>{{td $.lang "keyboard"}}</option>
+                            <option value="other" {{if .ticket}}{{if eq .ticket.IssueCategory "other"}}selected{{end}}{{end}}>{{td $.lang "other"}}</option>
                         </select>
                     </div>
                     <div class="col-md-4 form-group d-flex align-items-end">
@@ -144,11 +144,11 @@
                         <label>RMA Status</label>
                         <select name="rma_status" class="form-control">
                             <option value="" {{if .ticket}}{{if eq .ticket.RmaStatus ""}}selected{{end}}{{else}}selected{{end}}>N/A</option>
-                            <option value="initiated" {{if .ticket}}{{if eq .ticket.RmaStatus "initiated"}}selected{{end}}{{end}}>Initiated</option>
-                            <option value="shipped" {{if .ticket}}{{if eq .ticket.RmaStatus "shipped"}}selected{{end}}{{end}}>Shipped to Manufacturer</option>
-                            <option value="processing" {{if .ticket}}{{if eq .ticket.RmaStatus "processing"}}selected{{end}}{{end}}>Manufacturer Processing</option>
-                            <option value="returned" {{if .ticket}}{{if eq .ticket.RmaStatus "returned"}}selected{{end}}{{end}}>Returned from Manufacturer</option>
-                            <option value="complete" {{if .ticket}}{{if eq .ticket.RmaStatus "complete"}}selected{{end}}{{end}}>Complete</option>
+                            <option value="initiated" {{if .ticket}}{{if eq .ticket.RmaStatus "initiated"}}selected{{end}}{{end}}>{{td $.lang "initiated"}}</option>
+                            <option value="shipped" {{if .ticket}}{{if eq .ticket.RmaStatus "shipped"}}selected{{end}}{{end}}>{{td $.lang "shipped"}}</option>
+                            <option value="processing" {{if .ticket}}{{if eq .ticket.RmaStatus "processing"}}selected{{end}}{{end}}>{{td $.lang "processing"}}</option>
+                            <option value="returned" {{if .ticket}}{{if eq .ticket.RmaStatus "returned"}}selected{{end}}{{end}}>{{td $.lang "returned"}}</option>
+                            <option value="complete" {{if .ticket}}{{if eq .ticket.RmaStatus "complete"}}selected{{end}}{{end}}>{{td $.lang "complete"}}</option>
                         </select>
                     </div>
                 </div>
@@ -171,9 +171,9 @@
                         <label>Defective Part Shipped?</label>
                         <select name="defective_part_shipped" class="form-control">
                             <option value="" {{if .ticket}}{{if eq .ticket.DefectivePartShipped ""}}selected{{end}}{{else}}selected{{end}}>N/A</option>
-                            <option value="YES" {{if .ticket}}{{if eq .ticket.DefectivePartShipped "YES"}}selected{{end}}{{end}}>YES</option>
-                            <option value="NO" {{if .ticket}}{{if eq .ticket.DefectivePartShipped "NO"}}selected{{end}}{{end}}>NO</option>
-                            <option value="No Need" {{if .ticket}}{{if eq .ticket.DefectivePartShipped "No Need"}}selected{{end}}{{end}}>No Need</option>
+                            <option value="YES" {{if .ticket}}{{if eq .ticket.DefectivePartShipped "YES"}}selected{{end}}{{end}}>{{td $.lang "yes"}}</option>
+                            <option value="NO" {{if .ticket}}{{if eq .ticket.DefectivePartShipped "NO"}}selected{{end}}{{end}}>{{td $.lang "no"}}</option>
+                            <option value="No Need" {{if .ticket}}{{if eq .ticket.DefectivePartShipped "No Need"}}selected{{end}}{{end}}>{{td $.lang "no_need"}}</option>
                         </select>
                     </div>
                     <div class="col-md-4 form-group">
@@ -269,9 +269,9 @@
 
         <div class="mb-4">
             <button type="submit" class="btn btn-primary mr-2">
-                <i class="fas fa-save mr-1"></i>{{if .ticket}}Update Ticket{{else}}Create Ticket{{end}}
+                <i class="fas fa-save mr-1"></i>{{if and .ticket .ticket.Id}}Update Ticket{{else}}Create Ticket{{end}}
             </button>
-            <a href="/tickets{{if .ticket}}/{{.ticket.Id}}{{end}}" class="btn btn-default">Cancel</a>
+            <a href="/tickets{{if and .ticket .ticket.Id}}/{{.ticket.Id}}{{end}}" class="btn btn-default">Cancel</a>
         </div>
     </form>
 </div>

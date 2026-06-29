@@ -11,7 +11,6 @@ import (
 
 type SheetAdoptionService struct{}
 
-// ListOpenReviews loads open adoptions with their candidate ticket objects.
 func (s *SheetAdoptionService) ListOpenReviews(connID int) ([]*models.SheetAdoption, error) {
 	o := orm.NewOrm()
 	var adoptions []*models.SheetAdoption
@@ -41,7 +40,6 @@ func (s *SheetAdoptionService) CountOpen(connID int) int64 {
 	return c
 }
 
-// Resolve applies a map of adoptionID -> "new"|"dismiss"|"<ticketId>".
 func (s *SheetAdoptionService) Resolve(connID int, decisions map[int]string, userID int) error {
 	o := orm.NewOrm()
 	conn, err := (&SheetConnectionService{}).GetByID(connID)
@@ -142,8 +140,6 @@ func (s *SheetAdoptionService) upsertLink(o orm.Ormer, connID int, uid string, t
 	})
 }
 
-// snapshotFromData builds a baseline snapshot for the mapped keys present in a
-// stashed adoption data map (avoids re-reading the sheet).
 func snapshotFromData(t *models.Ticket, data map[string]string) map[string]string {
 	snap := map[string]string{}
 	custom := t.GetCustomFields()

@@ -5,8 +5,6 @@ import (
 	"time"
 )
 
-// SheetConnection binds one spreadsheet+tab to a branch and holds all of its
-// sync settings.
 type SheetConnection struct {
 	Id                  int       `orm:"auto;pk" json:"id"`
 	SpreadsheetId       string    `orm:"size(200)" json:"spreadsheet_id" form:"spreadsheet_id"`
@@ -37,7 +35,6 @@ func (c *SheetConnection) TableName() string {
 	return "sheet_connections"
 }
 
-// IdentityFields returns the ticket field names that make up the natural key.
 func (c *SheetConnection) IdentityFields() []string {
 	var out []string
 	for _, f := range strings.Split(c.IdentityKey, ",") {
@@ -52,7 +49,6 @@ func (c *SheetConnection) IdentityFields() []string {
 	return out
 }
 
-// EffectiveIntervalMinutes returns the auto-sync interval, floored at 5 minutes.
 func (c *SheetConnection) EffectiveIntervalMinutes() int {
 	if c.SyncIntervalMinutes < 5 {
 		return 5

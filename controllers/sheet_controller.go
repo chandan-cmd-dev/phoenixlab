@@ -12,8 +12,6 @@ type SheetController struct {
 	BaseController
 }
 
-// loadConn loads a connection and enforces branch access. It writes a flash +
-// redirect and returns nil when the connection is missing or not accessible.
 func (c *SheetController) loadConn() *models.SheetConnection {
 	id, err := c.GetIntParam(":id")
 	if err != nil {
@@ -433,7 +431,6 @@ func (c *SheetController) Delete() {
 	c.Redirect("/sheets", 302)
 }
 
-// collectDecisions reads decision_<id> form values into a map.
 func collectDecisions(c *SheetController) map[int]string {
 	decisions := map[int]string{}
 	_ = c.Ctx.Request.ParseForm()
@@ -448,8 +445,6 @@ func collectDecisions(c *SheetController) map[int]string {
 	return decisions
 }
 
-// detectBrandFromName is a thin exported-ish wrapper so the controller can
-// re-derive brand when the admin switches tabs.
 func detectBrandFromName(tab string) string {
 	lower := strings.ToLower(tab)
 	switch {

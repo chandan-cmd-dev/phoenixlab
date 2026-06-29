@@ -5,9 +5,6 @@ import (
 	"time"
 )
 
-// SheetRowLink is the durable association between a sheet row identity and a
-// ticket. BaselineSnapshot stores the last agreed-upon value of every mapped
-// field and is the three-way-merge baseline.
 type SheetRowLink struct {
 	Id               int       `orm:"auto;pk" json:"id"`
 	ConnectionId     int       `orm:"column(connection_id)" json:"connection_id"`
@@ -26,8 +23,6 @@ func (l *SheetRowLink) TableName() string {
 	return "sheet_row_links"
 }
 
-// StampValue is the hidden PL_SYNC_UID cell value written into the sheet for
-// this link (e.g. "PLR-42").
 func (l *SheetRowLink) StampValue() string {
 	return "PLR-" + strconv.Itoa(l.Id)
 }

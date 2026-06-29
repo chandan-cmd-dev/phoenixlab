@@ -10,8 +10,6 @@ type OAuthController struct {
 	BaseController
 }
 
-// GoogleConnect generates a state, stashes it in the session, and redirects to
-// Google's consent screen.
 func (c *OAuthController) GoogleConnect() {
 	c.RequireRole("admin", "super_admin")
 	oauth := services.OAuthService{}
@@ -25,7 +23,6 @@ func (c *OAuthController) GoogleConnect() {
 	c.Redirect(oauth.AuthURL(state), 302)
 }
 
-// GoogleCallback verifies state, exchanges the code, and saves the token.
 func (c *OAuthController) GoogleCallback() {
 	c.RequireRole("admin", "super_admin")
 	oauth := services.OAuthService{}
@@ -67,7 +64,6 @@ func (c *OAuthController) GoogleCallback() {
 	c.Redirect("/sheets", 302)
 }
 
-// GoogleDisconnect removes the stored token.
 func (c *OAuthController) GoogleDisconnect() {
 	c.RequireRole("admin", "super_admin")
 	(&services.OAuthService{}).Disconnect()

@@ -3,7 +3,10 @@ package controllers
 import (
 	"PhoenixLab/models"
 	"PhoenixLab/services"
+	"net/url"
+	"sort"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -58,6 +61,8 @@ func (c *TicketController) List() {
 		totalPages++
 	}
 
+	pageWindow := c.windowedPages(page, totalPages)
+
 	userService := services.UserService{}
 	technicians, _ := userService.GetAll(c.GetBranchScope(), c.GetCurrentUser().Role)
 
@@ -81,9 +86,12 @@ func (c *TicketController) List() {
 	c.Data["groups"] = groups
 	c.Data["tickets"] = tickets
 	c.Data["technicians"] = technicians
+	c.Data["brands"] = c.collectBrandOptions(ticketService)
 	c.Data["filters"] = filters
+	c.Data["filterQuery"] = buildFilterQuery(filters)
 	c.Data["page"] = page
 	c.Data["totalPages"] = totalPages
+	c.Data["pageWindow"] = pageWindow
 	c.Data["totalCount"] = int(totalCount)
 	c.Data["title"] = "Tickets"
 	c.SetActivePage("tickets")
@@ -493,6 +501,93 @@ func (c *TicketController) AdvanceWorkflow() {
 
 	c.FlashSuccess("Workflow advanced successfully")
 	c.Redirect("/tickets/"+strconv.Itoa(id), 302)
+}
+
+func buildFilterQuery(filters map[string]string) string {
+	keys := make([]string, 0, len(filters))
+	for k := range filters {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+
+	var b strings.Builder
+	for _, k := range keys {
+		v := filters[k]
+		if v == "" {
+			continue
+		}
+		b.WriteString("&")
+		b.WriteString(url.QueryEscape(k))
+		b.WriteString("=")
+		b.WriteString(url.QueryEscape(v))
+	}
+	return b.String()
+}
+
+func (c *TicketController) windowedPages(page, totalPages int) []int {
+	const windowSize = 5
+	if totalPages <= 0 {
+		return nil
+	}
+
+	start := page - windowSize/2
+	if start < 1 {
+		start = 1
+	}
+	end := start + windowSize - 1
+	if end > totalPages {
+		end = totalPages
+		if start = end - windowSize + 1; start < 1 {
+			start = 1
+		}
+	}
+
+	pages := make([]int, 0, end-start+1)
+	for i := start; i <= end; i++ {
+		pages = append(pages, i)
+	}
+	return pages
+}
+
+func (c *TicketController) collectBrandOptions(ticketService services.TicketService) []string {
+	scope := c.GetBranchScope()
+	seen := make(map[string]bool)
+
+	options := []string{}
+	for _, b := range []string{"HP", "Lenovo", "Dell"} {
+		seen[strings.ToLower(b)] = true
+		options = append(options, b)
+	}
+
+	var extras []string
+	add := func(b string) {
+		b = strings.TrimSpace(b)
+		if b == "" {
+			return
+		}
+		key := strings.ToLower(b)
+		if seen[key] {
+			return
+		}
+		seen[key] = true
+		extras = append(extras, b)
+	}
+
+	if brands, err := ticketService.GetDistinctBrands(scope); err == nil {
+		for _, b := range brands {
+			add(b)
+		}
+	}
+
+	connSvc := services.SheetConnectionService{}
+	if conns, err := connSvc.List(scope); err == nil {
+		for _, conn := range conns {
+			add(conn.Brand)
+		}
+	}
+
+	sort.Strings(extras)
+	return append(options, extras...)
 }
 
 func (c *TicketController) getCurrentUserCanEditTicket(ticket *models.Ticket) bool {

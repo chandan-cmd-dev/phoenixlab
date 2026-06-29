@@ -13,7 +13,6 @@ import (
 	"google.golang.org/api/sheets/v4"
 )
 
-// OAuthService manages the single app-level Google OAuth token.
 type OAuthService struct{}
 
 func googleRedirectURL() string {
@@ -33,26 +32,20 @@ func oauthConfig() *oauth2.Config {
 	}
 }
 
-// Configured reports whether the app has OAuth client credentials set.
 func (s *OAuthService) Configured() bool {
 	return os.Getenv("GOOGLE_OAUTH_CLIENT_ID") != "" && os.Getenv("GOOGLE_OAUTH_CLIENT_SECRET") != ""
 }
 
-// AuthURL builds the Google consent-screen URL. AccessTypeOffline + prompt=consent
-// guarantee a refresh token is issued.
 func (s *OAuthService) AuthURL(state string) string {
 	return oauthConfig().AuthCodeURL(state,
 		oauth2.AccessTypeOffline,
 		oauth2.SetAuthURLParam("prompt", "consent"))
 }
 
-// Exchange swaps an authorization code for a token.
 func (s *OAuthService) Exchange(code string) (*oauth2.Token, error) {
 	return oauthConfig().Exchange(context.Background(), code)
 }
 
-// SaveToken persists a token as the single connected account. A previous
-// refresh token / account email are preserved when the new token omits them.
 func (s *OAuthService) SaveToken(tok *oauth2.Token, email string) error {
 	o := orm.NewOrm()
 
@@ -112,8 +105,6 @@ func toOAuthToken(t *models.GoogleToken) *oauth2.Token {
 	}
 }
 
-// TokenSource returns an auto-refreshing token source. Whenever the underlying
-// access token is refreshed, the new token is written back to the DB.
 func (s *OAuthService) TokenSource() (oauth2.TokenSource, error) {
 	gt, err := s.LoadToken()
 	if err != nil {

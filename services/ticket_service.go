@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"reflect"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/beego/beego/v2/client/orm"
@@ -174,6 +175,29 @@ func (s *TicketService) GetByBranchPaginated(branchID int, filters map[string]st
 	}
 
 	return tickets, totalCount, err
+}
+
+func (s *TicketService) GetDistinctBrands(branchID int) ([]string, error) {
+	o := orm.NewOrm()
+	qs := o.QueryTable("tickets")
+	if branchID > 0 {
+		qs = qs.Filter("BranchId", branchID)
+	}
+
+	var values orm.ParamsList
+	if _, err := qs.Distinct().ValuesFlat(&values, "Brand"); err != nil {
+		return nil, err
+	}
+
+	var brands []string
+	for _, v := range values {
+		if str, ok := v.(string); ok {
+			if str = strings.TrimSpace(str); str != "" {
+				brands = append(brands, str)
+			}
+		}
+	}
+	return brands, nil
 }
 
 func (s *TicketService) GetRelatedTickets(serialNumber string, excludeID int) ([]*models.Ticket, error) {

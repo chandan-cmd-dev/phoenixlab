@@ -15,14 +15,10 @@ import (
 	"github.com/beego/beego/v2/client/orm"
 )
 
-// syncUIDHeader is the hidden column the app stamps into a sheet to carry a
-// durable per-row UID.
 const syncUIDHeader = "PL_SYNC_UID"
 
-// SheetSyncService is the core sync engine: preview, import, push, reconcile.
 type SheetSyncService struct{}
 
-// syncContext is everything needed to process the rows of one connection.
 type syncContext struct {
 	conn        *models.SheetConnection
 	client      *SheetsClient
@@ -49,7 +45,6 @@ type rowAction struct {
 	candidates []int
 }
 
-// SyncPreview holds dry-run counts.
 type SyncPreview struct {
 	Total     int
 	Creates   int
@@ -59,7 +54,6 @@ type SyncPreview struct {
 	Skipped   int
 }
 
-// SyncResult holds the outcome of an import/push/reconcile.
 type SyncResult struct {
 	Total        int
 	Created      int
@@ -74,7 +68,6 @@ type SyncResult struct {
 	Errors       []string
 }
 
-// Summary renders a one-line human summary (used by the scheduler).
 func (r *SyncResult) Summary() string {
 	return fmt.Sprintf("created=%d updated=%d adopted=%d ambiguous=%d conflicts=%d pushed=%d skipped=%d",
 		r.Created, r.Updated, r.Adopted, r.Ambiguous, r.Conflicts, r.Pushed, r.Skipped)
@@ -242,7 +235,6 @@ func (s *SheetSyncService) matchTicketsByIdentity(o orm.Ormer, ctx *syncContext,
 	return ids
 }
 
-// Preview classifies every row without writing.
 func (s *SheetSyncService) Preview(conn *models.SheetConnection) (*SyncPreview, error) {
 	ctx, err := s.loadContext(conn)
 	if err != nil {
@@ -269,7 +261,6 @@ func (s *SheetSyncService) Preview(conn *models.SheetConnection) (*SyncPreview, 
 	return p, nil
 }
 
-// Import (pull) applies create/adopt/update actions and records adoptions.
 func (s *SheetSyncService) Import(conn *models.SheetConnection, userID int) (*SyncResult, error) {
 	ctx, err := s.loadContext(conn)
 	if err != nil {
@@ -426,7 +417,6 @@ func (s *SheetSyncService) recordAdoption(o orm.Ormer, ctx *syncContext, act row
 	})
 }
 
-// PushPreview counts how many rows would push vs. be skipped (unlinked).
 func (s *SheetSyncService) PushPreview(conn *models.SheetConnection) (*SyncPreview, error) {
 	ctx, err := s.loadContext(conn)
 	if err != nil {
@@ -449,7 +439,6 @@ func (s *SheetSyncService) PushPreview(conn *models.SheetConnection) (*SyncPrevi
 	return p, nil
 }
 
-// Push writes ticket values back into the sheet.
 func (s *SheetSyncService) Push(conn *models.SheetConnection, userID int) (*SyncResult, error) {
 	if conn.SyncDirection == "pull" {
 		return nil, fmt.Errorf("connection is pull-only; push is disabled")
@@ -512,7 +501,6 @@ func (s *SheetSyncService) Push(conn *models.SheetConnection, userID int) (*Sync
 	return res, nil
 }
 
-// Reconcile runs the full three-way merge for two-way connections.
 func (s *SheetSyncService) Reconcile(conn *models.SheetConnection, userID int) (*SyncResult, error) {
 	if conn.SyncDirection != "two_way" {
 		return nil, fmt.Errorf("reconcile requires a two-way connection")
@@ -670,7 +658,6 @@ func (ctx *syncContext) canonicalSnapshot(t *models.Ticket) map[string]string {
 	return snap
 }
 
-// canonicalValue normalizes a raw sheet string for a given transform.
 func canonicalValue(raw, transform string) string {
 	raw = strings.TrimSpace(raw)
 	switch transform {
@@ -693,8 +680,6 @@ func canonicalValue(raw, transform string) string {
 	}
 }
 
-// fieldCanonical normalizes the DB value of a ticket field to the same stable
-// string canonicalValue would produce.
 func fieldCanonical(t *models.Ticket, field string) string {
 	v := reflect.ValueOf(t).Elem().FieldByName(field)
 	if !v.IsValid() {
@@ -758,8 +743,6 @@ func classifyField(baseline, sheet, db string) string {
 	}
 }
 
-// setTicketField sets a ticket field from a raw string using transform-aware
-// parsing.
 func setTicketField(t *models.Ticket, field, raw, transform string) {
 	v := reflect.ValueOf(t).Elem().FieldByName(field)
 	if !v.IsValid() || !v.CanSet() {
@@ -785,7 +768,6 @@ func setTicketField(t *models.Ticket, field, raw, transform string) {
 	}
 }
 
-// formatFieldValue renders a ticket field as a sheet-friendly string.
 func formatFieldValue(t *models.Ticket, field string) string {
 	v := reflect.ValueOf(t).Elem().FieldByName(field)
 	if !v.IsValid() {
@@ -822,7 +804,6 @@ func formatFieldValue(t *models.Ticket, field string) string {
 	return ""
 }
 
-// applyStashedData applies a stashed adoption row-data map onto a ticket.
 func applyStashedData(t *models.Ticket, data map[string]string) {
 	for k, raw := range data {
 		if strings.HasPrefix(k, models.CustomFieldPrefix) {

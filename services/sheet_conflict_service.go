@@ -29,7 +29,6 @@ func (s *SheetConflictService) CountOpen(connID int) int64 {
 	return c
 }
 
-// Resolve applies a map of conflictID -> "sheet"|"db".
 func (s *SheetConflictService) Resolve(connID int, decisions map[int]string, userID int) error {
 	o := orm.NewOrm()
 	conn, err := (&SheetConnectionService{}).GetByID(connID)

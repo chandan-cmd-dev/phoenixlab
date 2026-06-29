@@ -69,7 +69,7 @@
                     <td><a href="/tickets/{{.Id}}"><code>{{.SerialNumber}}</code></a></td>
                     <td>{{.Brand}} {{.Model}}</td>
                     <td>{{truncate .IssueDescription 50}}</td>
-                    <td><span class="badge status-{{.Status}}">{{statusLabel .Status}}</span></td>
+                    <td><span class="badge status-{{.Status}}">{{td $.lang .Status}}</span></td>
                     <td>{{.AssignedToName}}</td>
                     <td>{{formatTAT .TATHours}}</td>
                     <td><a href="/tickets/{{.Id}}" class="btn btn-xs btn-outline-primary">Open</a></td>

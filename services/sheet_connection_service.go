@@ -9,8 +9,6 @@ import (
 
 type SheetConnectionService struct{}
 
-// Create normalizes the spreadsheet URL/ID, validates the account can open it,
-// and stores a draft connection with sensible defaults.
 func (s *SheetConnectionService) Create(spreadsheetInput string, branchID, userID int) (*models.SheetConnection, error) {
 	id := ExtractSpreadsheetID(spreadsheetInput)
 	if id == "" {
@@ -65,7 +63,6 @@ func (s *SheetConnectionService) GetByID(id int) (*models.SheetConnection, error
 	return conn, nil
 }
 
-// List returns connections, scoped to a branch when branchScope > 0.
 func (s *SheetConnectionService) List(branchScope int) ([]*models.SheetConnection, error) {
 	o := orm.NewOrm()
 	qs := o.QueryTable("sheet_connections").OrderBy("-UpdatedAt")

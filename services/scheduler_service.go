@@ -10,10 +10,8 @@ import (
 	"github.com/beego/beego/v2/client/orm"
 )
 
-// schedulerInflight guards against the same connection syncing concurrently.
 var schedulerInflight sync.Map
 
-// StartScheduler launches the auto-sync background ticker (called from main).
 func StartScheduler() {
 	go func() {
 		time.Sleep(15 * time.Second)
