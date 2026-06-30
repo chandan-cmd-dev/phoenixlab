@@ -57,6 +57,7 @@ func (c *UserController) Create() {
 	}
 
 	u.CreatedBy = c.GetCurrentUser().Id
+	u.IsActive = true
 
 	userService := services.UserService{}
 	if err := userService.Create(u, password); err != nil {

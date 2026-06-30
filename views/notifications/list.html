@@ -1,0 +1,48 @@
+{{template "layouts/base.html" .}}
+
+{{define "LayoutContent"}}
+<div class="card">
+    <div class="card-header">
+        <h3 class="card-title"><i class="far fa-bell mr-1"></i>{{t .lang "notifications"}}</h3>
+        <div class="card-tools">
+            <form method="POST" action="/notifications/read-all" class="m-0">
+                <button type="submit" class="btn btn-tool"><i class="fas fa-check-double mr-1"></i>{{t .lang "mark_all_read"}}</button>
+            </form>
+        </div>
+    </div>
+    <div class="card-body table-responsive p-0">
+        <table class="table table-hover table-sm">
+            <tbody>
+                {{range .notifications}}
+                <tr class="{{if not .IsRead}}font-weight-bold{{end}}">
+                    <td style="width:30px" class="text-center">
+                        {{if not .IsRead}}<span class="text-primary">&bull;</span>{{end}}
+                    </td>
+                    <td>
+                        <form method="POST" action="/notifications/{{.Id}}/read?ticket={{.TicketId}}" class="m-0">
+                            <button type="submit" class="btn btn-link p-0 text-left text-body" style="white-space:normal">
+                                <i class="fas fa-laptop-medical mr-2 text-muted"></i>{{.ActorName}} {{.Message}}
+                            </button>
+                        </form>
+                    </td>
+                    <td class="text-muted text-sm" style="white-space:nowrap">#{{.TicketId}}</td>
+                    <td class="text-muted text-xs" style="white-space:nowrap">{{formatDateTime .CreatedAt}}</td>
+                </tr>
+                {{else}}
+                <tr><td colspan="4" class="text-center text-muted py-4">{{t .lang "no_notifications"}}</td></tr>
+                {{end}}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{{if gt .totalPages 1}}
+<div class="d-flex justify-content-between align-items-center mt-2">
+    <small class="text-muted">{{t .lang "showing_results"}} {{.total}}</small>
+    <div>
+        {{if gt .page 1}}<a href="?page={{minus .page 1}}" class="btn btn-outline-secondary btn-sm mr-1">&laquo; {{t .lang "previous"}}</a>{{end}}
+        {{if lt .page .totalPages}}<a href="?page={{add .page 1}}" class="btn btn-outline-secondary btn-sm">{{t .lang "next"}} &raquo;</a>{{end}}
+    </div>
+</div>
+{{end}}
+{{end}}

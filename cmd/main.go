@@ -3,11 +3,16 @@ package main
 import (
 	"PhoenixLab/models"
 	_ "PhoenixLab/routers"
+	"PhoenixLab/services"
+	"encoding/json"
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
+	"sort"
 	"strings"
 	"time"
+	"unicode"
 
 	"github.com/beego/beego/v2/client/orm"
 	"github.com/beego/beego/v2/server/web"
@@ -37,6 +42,14 @@ func init() {
 		new(models.AuditLog),
 		new(models.OdooSyncLog),
 		new(models.Comment),
+		new(models.TicketWorkflow),
+		new(models.GoogleToken),
+		new(models.SheetConnection),
+		new(models.SheetColumnMapping),
+		new(models.SheetRowLink),
+		new(models.SheetConflict),
+		new(models.SheetAdoption),
+		new(models.Notification),
 	)
 }
 
@@ -50,18 +63,201 @@ func connectWithRetry(maxAttempts int) error {
 			time.Sleep(3 * time.Second)
 			continue
 		}
-		if err := orm.RunSyncdb("default", false, true); err != nil {
-			log.Printf("Schema sync warning: %v", err)
-		}
 		return nil
 	}
 	return fmt.Errorf("could not connect to database after %d attempts: %w", maxAttempts, lastErr)
+}
+
+func syncSchema() {
+	if err := orm.RunSyncdb("default", false, true); err != nil {
+		log.Printf("Schema sync warning: %v", err)
+	}
+}
+
+func runMigrations() {
+	o := orm.NewOrm()
+
+	var smCount int
+	o.Raw(`SELECT COUNT(*) FROM information_schema.tables
+		WHERE table_schema = 'public' AND table_name = 'schema_migrations'`).QueryRow(&smCount)
+
+	freshMigrationTable := smCount == 0
+
+	_, err := o.Raw(`CREATE TABLE IF NOT EXISTS schema_migrations (
+		filename TEXT PRIMARY KEY,
+		applied_at TIMESTAMPTZ DEFAULT NOW()
+	)`).Exec()
+	if err != nil {
+		log.Printf("Warning: could not create schema_migrations table: %v", err)
+		return
+	}
+
+	if freshMigrationTable {
+		var ticketsExist int
+		o.Raw(`SELECT COUNT(*) FROM information_schema.tables
+			WHERE table_schema = 'public' AND table_name = 'tickets'`).QueryRow(&ticketsExist)
+
+		if ticketsExist > 0 {
+			log.Println("Migration: existing production database detected — pre-seeding schema_migrations")
+
+			baseline := []string{
+				"001_create_branches.sql",
+				"002_create_users.sql",
+				"003_create_parts_catalog.sql",
+				"004_create_tickets.sql",
+				"005_create_ticket_parts.sql",
+				"006_create_audit_log.sql",
+				"007_create_odoo_sync_log.sql",
+				"008_add_excel_fields.sql",
+				"009_create_comments.sql",
+			}
+			for _, name := range baseline {
+				o.Raw("INSERT INTO schema_migrations (filename) VALUES (?) ON CONFLICT DO NOTHING", name).Exec()
+			}
+			log.Printf("Migration: marked %d baseline migrations as already applied", len(baseline))
+		}
+	}
+
+	files, err := filepath.Glob("migrations/*.sql")
+	if err != nil || len(files) == 0 {
+		log.Printf("No migration files found")
+		return
+	}
+	sort.Strings(files)
+
+	for _, f := range files {
+		basename := filepath.Base(f)
+		var count int
+		o.Raw("SELECT COUNT(*) FROM schema_migrations WHERE filename = ?", basename).QueryRow(&count)
+		if count > 0 {
+			continue
+		}
+
+		content, err := os.ReadFile(f)
+		if err != nil {
+			log.Printf("Migration error reading %s: %v", basename, err)
+			continue
+		}
+
+		log.Printf("Migration: applying %s ...", basename)
+
+		db, _ := orm.GetDB("default")
+		tx, err := db.Begin()
+		if err != nil {
+			log.Printf("Migration error starting tx for %s: %v", basename, err)
+			continue
+		}
+
+		statements := strings.Split(string(content), ";")
+		var txErr error
+		for _, stmt := range statements {
+			stmt = strings.TrimSpace(stmt)
+			if stmt == "" {
+				continue
+			}
+			if _, err := tx.Exec(stmt); err != nil {
+				txErr = err
+				break
+			}
+		}
+
+		if txErr != nil {
+			tx.Rollback()
+			log.Printf("Migration %s failed: %v", basename, txErr)
+			continue
+		}
+
+		if _, err := tx.Exec("INSERT INTO schema_migrations (filename) VALUES ($1)", basename); err != nil {
+			tx.Rollback()
+			log.Printf("Migration %s: failed to record: %v", basename, err)
+			continue
+		}
+
+		if err := tx.Commit(); err != nil {
+			log.Printf("Migration %s: commit failed: %v", basename, err)
+			continue
+		}
+		log.Printf("Migration applied: %s", basename)
+	}
+}
+
+var i18nData map[string]map[string]string
+
+func loadI18n() {
+	i18nData = make(map[string]map[string]string)
+	langs := []string{"en", "zh", "es"}
+	for _, lang := range langs {
+		path := fmt.Sprintf("static/i18n/%s.json", lang)
+		data, err := os.ReadFile(path)
+		if err != nil {
+			log.Printf("i18n: could not load %s: %v", path, err)
+			continue
+		}
+		var m map[string]string
+		if err := json.Unmarshal(data, &m); err != nil {
+			log.Printf("i18n: could not parse %s: %v", path, err)
+			continue
+		}
+		i18nData[lang] = m
+	}
+}
+
+func t(lang, key string) string {
+	if m, ok := i18nData[lang]; ok {
+		if v, ok := m[key]; ok {
+			return v
+		}
+	}
+	if m, ok := i18nData["en"]; ok {
+		if v, ok := m[key]; ok {
+			return v
+		}
+	}
+	return key
+}
+
+func i18nKey(value string) string {
+	r := strings.NewReplacer(" ", "_", "-", "_", "/", "_", ".", "_")
+	return r.Replace(strings.ToLower(strings.TrimSpace(value)))
+}
+
+func humanizeLabel(value string) string {
+	words := strings.Fields(strings.ReplaceAll(value, "_", " "))
+	for i, w := range words {
+		runes := []rune(w)
+		runes[0] = unicode.ToUpper(runes[0])
+		words[i] = string(runes)
+	}
+	return strings.Join(words, " ")
+}
+
+func td(lang, value string) string {
+	if strings.TrimSpace(value) == "" {
+		return ""
+	}
+	key := i18nKey(value)
+	if m, ok := i18nData[lang]; ok {
+		if v, ok := m[key]; ok {
+			return v
+		}
+	}
+	if m, ok := i18nData["en"]; ok {
+		if v, ok := m[key]; ok {
+			return v
+		}
+	}
+	return humanizeLabel(value)
 }
 
 func main() {
 	if err := connectWithRetry(10); err != nil {
 		log.Fatalf("Fatal: %v", err)
 	}
+
+	runMigrations()
+	syncSchema()
+	loadI18n()
+	services.StartScheduler()
 
 	if web.GlobalSessions == nil {
 		var err error
@@ -166,6 +362,52 @@ func main() {
 			end = len(s)
 		}
 		return s[start:end]
+	})
+
+	web.AddFuncMap("seq", func(start, end int) []int {
+		var result []int
+		for i := start; i <= end; i++ {
+			result = append(result, i)
+		}
+		return result
+	})
+
+	web.AddFuncMap("t", t)
+
+	web.AddFuncMap("td", td)
+
+	web.AddFuncMap("wfStepLabel", func(step string) string {
+		if label, ok := models.WorkflowStepLabels[step]; ok {
+			return label
+		}
+		return strings.ReplaceAll(step, "_", " ")
+	})
+
+	web.AddFuncMap("wfTypeLabel", func(wfType string) string {
+		if label, ok := models.WorkflowTypeLabels[wfType]; ok {
+			return label
+		}
+		return strings.ReplaceAll(wfType, "_", " ")
+	})
+
+	web.AddFuncMap("formatDateTZ", func(t time.Time, tz string) string {
+		if t.IsZero() {
+			return ""
+		}
+		if loc, err := time.LoadLocation(tz); err == nil {
+			t = t.In(loc)
+		}
+		return t.Format("02 Jan 2006")
+	})
+
+	web.AddFuncMap("formatDateTimeTZ", func(t time.Time, tz string) string {
+		if t.IsZero() {
+			return ""
+		}
+		if loc, err := time.LoadLocation(tz); err == nil {
+			t = t.In(loc)
+		}
+		return t.Format("02 Jan 2006 15:04")
 	})
 
 	runmode, _ := web.AppConfig.String("runmode")

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"reflect"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/beego/beego/v2/client/orm"
@@ -74,6 +75,20 @@ func (s *TicketService) GetByID(id int) (*models.Ticket, error) {
 		}
 	}
 
+	if t.ParentTicketId > 0 {
+		parent := &models.Ticket{Id: t.ParentTicketId}
+		if err := o.Read(parent); err == nil {
+			t.ParentTicket = parent
+		}
+	}
+
+	if t.LinkedTicketId > 0 {
+		linked := &models.Ticket{Id: t.LinkedTicketId}
+		if err := o.Read(linked); err == nil {
+			t.LinkedTicket = linked
+		}
+	}
+
 	return t, nil
 }
 
@@ -103,33 +118,114 @@ func (s *TicketService) Update(t *models.Ticket, changedFields []string, userID 
 }
 
 func (s *TicketService) GetByBranch(branchID int, filters map[string]string) ([]*models.Ticket, error) {
+	tickets, _, err := s.GetByBranchPaginated(branchID, filters, 0, 0)
+	return tickets, err
+}
+
+func (s *TicketService) GetByBranchPaginated(branchID int, filters map[string]string, page int, perPage int) ([]*models.Ticket, int64, error) {
 	o := orm.NewOrm()
 	qs := o.QueryTable("tickets")
 
+	cond := orm.NewCondition()
+
+	if branchID > 0 {
+		cond = cond.And("BranchId", branchID)
+	}
+	if v, ok := filters["status"]; ok && v != "" {
+		cond = cond.And("Status", v)
+	}
+	if v, ok := filters["warranty"]; ok && v != "" {
+		cond = cond.And("WarrantyStatus", v)
+	}
+	if v, ok := filters["assigned"]; ok && v != "" {
+		if assignedID, err := strconv.Atoi(v); err == nil {
+			cond = cond.And("AssignedTo", assignedID)
+		}
+	}
+	if v, ok := filters["brand"]; ok && v != "" {
+		cond = cond.And("Brand", v)
+	}
+	if v, ok := filters["q"]; ok && v != "" {
+		v = strings.TrimSpace(v)
+		searchFields := []string{
+			"SerialNumber", "WorkOrderNumber", "CaseNumber", "PoNumber",
+			"RmaNumber", "RmaRefNumber", "IrNumber", "Upc", "PartNumber",
+			"NeededPart", "CourierTracking", "ReturnTracking", "Model",
+			"Brand", "CustomerName", "CustomerEmail", "CustomerPhone",
+			"IssueDescription", "DiagnosticCode",
+		}
+		search := orm.NewCondition()
+		for _, f := range searchFields {
+			search = search.Or(f+"__icontains", v)
+		}
+		if id, err := strconv.Atoi(v); err == nil {
+			search = search.Or("Id", id)
+		}
+		cond = cond.AndCond(search)
+	}
+
+	qs = qs.SetCond(cond)
+
+	totalCount, _ := qs.Count()
+
+	if v, ok := filters["limit"]; ok && v != "" {
+		if limit, err := strconv.Atoi(v); err == nil && limit > 0 {
+			qs = qs.Limit(limit)
+		}
+	} else if perPage > 0 {
+		offset := 0
+		if page > 1 {
+			offset = (page - 1) * perPage
+		}
+		qs = qs.Limit(perPage).Offset(offset)
+	}
+
+	var tickets []*models.Ticket
+	_, err := qs.OrderBy("SerialNumber", "-CreatedAt").All(&tickets)
+
+	for _, tk := range tickets {
+		if tk.AssignedTo > 0 {
+			user := &models.User{Id: tk.AssignedTo}
+			if err := o.Read(user); err == nil {
+				tk.Assigned = user
+			}
+		}
+	}
+
+	return tickets, totalCount, err
+}
+
+func (s *TicketService) GetDistinctBrands(branchID int) ([]string, error) {
+	o := orm.NewOrm()
+	qs := o.QueryTable("tickets")
 	if branchID > 0 {
 		qs = qs.Filter("BranchId", branchID)
 	}
 
-	if v, ok := filters["status"]; ok && v != "" {
-		qs = qs.Filter("Status", v)
-	}
-	if v, ok := filters["warranty"]; ok && v != "" {
-		qs = qs.Filter("WarrantyStatus", v)
-	}
-	if v, ok := filters["q"]; ok && v != "" {
-		qs = qs.Filter("SerialNumber__icontains", v)
-	}
-	if v, ok := filters["assigned"]; ok && v != "" {
-		if assignedID, err := strconv.Atoi(v); err == nil {
-			qs = qs.Filter("AssignedTo", assignedID)
-		}
-	}
-	if v, ok := filters["brand"]; ok && v != "" {
-		qs = qs.Filter("Brand", v)
+	var values orm.ParamsList
+	if _, err := qs.Distinct().ValuesFlat(&values, "Brand"); err != nil {
+		return nil, err
 	}
 
+	var brands []string
+	for _, v := range values {
+		if str, ok := v.(string); ok {
+			if str = strings.TrimSpace(str); str != "" {
+				brands = append(brands, str)
+			}
+		}
+	}
+	return brands, nil
+}
+
+func (s *TicketService) GetRelatedTickets(serialNumber string, excludeID int) ([]*models.Ticket, error) {
+	o := orm.NewOrm()
 	var tickets []*models.Ticket
-	_, err := qs.OrderBy("-CreatedAt").All(&tickets)
+	_, err := o.QueryTable("tickets").
+		Filter("SerialNumber", serialNumber).
+		Exclude("Id", excludeID).
+		OrderBy("-CreatedAt").
+		All(&tickets)
 	return tickets, err
 }
 

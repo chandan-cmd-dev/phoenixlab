@@ -1,6 +1,7 @@
 {{template "layouts/base.html" .}}
 
 {{define "LayoutContent"}}
+{{$canDelete := eq .currentUser.Role "super_admin"}}
 <div class="card card-outline card-primary">
     <div class="card-header">
         <h3 class="card-title">Filter Tickets</h3>
@@ -13,54 +14,54 @@
             <div class="row">
                 <div class="col-md-2">
                     <div class="form-group">
-                        <label>Search</label>
-                        <input type="text" name="q" value="{{.filters.q}}" placeholder="Serial number..." class="form-control form-control-sm">
+                        <label>{{t $.lang "search"}}</label>
+                        <input type="text" name="q" value="{{.filters.q}}" placeholder="Serial, work order, RMA, case, PO..." class="form-control form-control-sm">
                     </div>
                 </div>
                 <div class="col-md-2">
                     <div class="form-group">
-                        <label>Status</label>
+                        <label>{{t $.lang "status"}}</label>
                         <select name="status" class="form-control form-control-sm">
-                            <option value="">All Statuses</option>
-                            <option value="open" {{if eq .filters.status "open"}}selected{{end}}>Open</option>
-                            <option value="diagnosing" {{if eq .filters.status "diagnosing"}}selected{{end}}>Diagnosing</option>
-                            <option value="parts_ordered" {{if eq .filters.status "parts_ordered"}}selected{{end}}>Parts Ordered</option>
-                            <option value="part_applied" {{if eq .filters.status "part_applied"}}selected{{end}}>Part Applied</option>
-                            <option value="in_repair" {{if eq .filters.status "in_repair"}}selected{{end}}>In Repair</option>
-                            <option value="qc_check" {{if eq .filters.status "qc_check"}}selected{{end}}>QC Check</option>
-                            <option value="resolved" {{if eq .filters.status "resolved"}}selected{{end}}>Resolved</option>
-                            <option value="closed" {{if eq .filters.status "closed"}}selected{{end}}>Closed</option>
-                            <option value="on_hold" {{if eq .filters.status "on_hold"}}selected{{end}}>On Hold</option>
+                            <option value="">{{t $.lang "all"}}</option>
+                            <option value="open" {{if eq .filters.status "open"}}selected{{end}}>{{td $.lang "open"}}</option>
+                            <option value="diagnosing" {{if eq .filters.status "diagnosing"}}selected{{end}}>{{td $.lang "diagnosing"}}</option>
+                            <option value="parts_ordered" {{if eq .filters.status "parts_ordered"}}selected{{end}}>{{td $.lang "parts_ordered"}}</option>
+                            <option value="part_applied" {{if eq .filters.status "part_applied"}}selected{{end}}>{{td $.lang "part_applied"}}</option>
+                            <option value="in_repair" {{if eq .filters.status "in_repair"}}selected{{end}}>{{td $.lang "in_repair"}}</option>
+                            <option value="qc_check" {{if eq .filters.status "qc_check"}}selected{{end}}>{{td $.lang "qc_check"}}</option>
+                            <option value="resolved" {{if eq .filters.status "resolved"}}selected{{end}}>{{td $.lang "resolved"}}</option>
+                            <option value="closed" {{if eq .filters.status "closed"}}selected{{end}}>{{td $.lang "closed"}}</option>
+                            <option value="on_hold" {{if eq .filters.status "on_hold"}}selected{{end}}>{{td $.lang "on_hold"}}</option>
                         </select>
                     </div>
                 </div>
                 <div class="col-md-2">
                     <div class="form-group">
-                        <label>Brand</label>
+                        <label>{{t $.lang "brand"}}</label>
                         <select name="brand" class="form-control form-control-sm">
-                            <option value="">All Brands</option>
-                            <option value="HP" {{if eq .filters.brand "HP"}}selected{{end}}>HP</option>
-                            <option value="Lenovo" {{if eq .filters.brand "Lenovo"}}selected{{end}}>Lenovo</option>
-                            <option value="Dell" {{if eq .filters.brand "Dell"}}selected{{end}}>Dell</option>
+                            <option value="">{{t $.lang "all"}}</option>
+                            {{range .brands}}
+                            <option value="{{.}}" {{if eq $.filters.brand .}}selected{{end}}>{{.}}</option>
+                            {{end}}
                         </select>
                     </div>
                 </div>
                 <div class="col-md-2">
                     <div class="form-group">
-                        <label>Warranty</label>
+                        <label>{{t $.lang "warranty"}}</label>
                         <select name="warranty" class="form-control form-control-sm">
-                            <option value="">All</option>
-                            <option value="in_warranty" {{if eq .filters.warranty "in_warranty"}}selected{{end}}>In Warranty</option>
-                            <option value="out_of_warranty" {{if eq .filters.warranty "out_of_warranty"}}selected{{end}}>Out of Warranty</option>
-                            <option value="extended_warranty" {{if eq .filters.warranty "extended_warranty"}}selected{{end}}>Extended</option>
+                            <option value="">{{t $.lang "all"}}</option>
+                            <option value="in_warranty" {{if eq .filters.warranty "in_warranty"}}selected{{end}}>{{td $.lang "in_warranty"}}</option>
+                            <option value="out_of_warranty" {{if eq .filters.warranty "out_of_warranty"}}selected{{end}}>{{td $.lang "out_of_warranty"}}</option>
+                            <option value="extended_warranty" {{if eq .filters.warranty "extended_warranty"}}selected{{end}}>{{td $.lang "extended_warranty"}}</option>
                         </select>
                     </div>
                 </div>
                 <div class="col-md-2">
                     <div class="form-group">
-                        <label>Assigned To</label>
+                        <label>{{t $.lang "assigned"}}</label>
                         <select name="assigned" class="form-control form-control-sm">
-                            <option value="">Anyone</option>
+                            <option value="">{{t $.lang "all"}}</option>
                             {{range .technicians}}
                             <option value="{{.Id}}" {{if eq (printf "%d" .Id) $.filters.assigned}}selected{{end}}>{{.Name}}</option>
                             {{end}}
@@ -68,8 +69,8 @@
                     </div>
                 </div>
                 <div class="col-md-2 d-flex align-items-end pb-3">
-                    <button type="submit" class="btn btn-secondary btn-sm mr-1"><i class="fas fa-filter mr-1"></i>Filter</button>
-                    <a href="/tickets" class="btn btn-outline-secondary btn-sm">Clear</a>
+                    <button type="submit" class="btn btn-secondary btn-sm mr-1"><i class="fas fa-filter mr-1"></i>{{t $.lang "filter"}}</button>
+                    <a href="/tickets" class="btn btn-outline-secondary btn-sm">{{t $.lang "clear"}}</a>
                 </div>
             </div>
         </form>
@@ -77,46 +78,137 @@
 </div>
 
 <div class="card">
+    <div class="card-header d-flex align-items-center">
+        <span class="text-muted text-sm">{{.totalCount}} tickets found</span>
+        {{if $canDelete}}
+        <button type="button" id="pl-bulk-delete" class="btn btn-outline-danger btn-sm ml-auto" onclick="plBulkDelete()" disabled>
+            <i class="fas fa-trash mr-1"></i>Delete Selected (<span id="pl-sel-count">0</span>)
+        </button>
+        {{end}}
+    </div>
     <div class="card-body table-responsive p-0">
-        <table class="table table-hover table-striped">
+        <table class="table table-sm table-hover mb-0" style="font-size:.85rem">
             <thead>
-                <tr>
-                    <th>S/N</th>
-                    <th>Customer</th>
-                    <th>Device</th>
+                <tr class="text-uppercase text-muted" style="font-size:.7rem; letter-spacing:.05em">
+                    {{if $canDelete}}<th style="width:30px" class="pl-3"><input type="checkbox" id="pl-select-all" title="Select all"></th>{{end}}
+                    <th style="width:60px" {{if not $canDelete}}class="pl-3"{{end}}>#</th>
                     <th>Issue</th>
-                    <th>Status</th>
-                    <th>Priority</th>
-                    <th>Assigned</th>
-                    <th>Received</th>
-                    <th></th>
+                    <th style="width:100px">Status</th>
+                    <th style="width:150px">Tags</th>
+                    <th style="width:110px">Assigned</th>
+                    <th style="width:100px">Received</th>
+                    <th style="width:100px"></th>
                 </tr>
             </thead>
             <tbody>
-                {{range .tickets}}
-                <tr class="priority-{{.Priority}}">
-                    <td><a href="/tickets/{{.Id}}"><code>{{.SerialNumber}}</code></a></td>
-                    <td>{{if .CustomerName}}{{.CustomerName}}{{else}}-{{end}}</td>
-                    <td>{{if .Brand}}{{.Brand}} {{.Model}}{{else}}-{{end}}</td>
-                    <td>{{if .IssueDescription}}{{truncate .IssueDescription 40}}{{else}}-{{end}}</td>
-                    <td><span class="badge status-{{.Status}}">{{statusLabel .Status}}</span></td>
-                    <td>
-                        <span class="badge {{if eq .Priority "critical"}}badge-danger{{else if eq .Priority "high"}}badge-warning{{else if eq .Priority "low"}}badge-secondary{{else}}badge-info{{end}}">{{.Priority}}</span>
+                {{range .groups}}
+                <tr class="sn-group-header">
+                    <td colspan="{{if $canDelete}}8{{else}}7{{end}}" class="py-1 pl-3">
+                        <i class="fas fa-laptop text-muted mr-1" style="font-size:.75rem"></i>
+                        <strong class="mr-2">{{.SerialNumber}}</strong>
+                        {{if .Brand}}<small class="text-muted mr-2">{{.Brand}} {{.Model}}</small>{{end}}
+                        {{if eq .WarrantyStatus "in_warranty"}}<span class="badge badge-success" style="font-size:.65rem">{{td $.lang .WarrantyStatus}}</span>
+                        {{else if eq .WarrantyStatus "out_of_warranty"}}<span class="badge badge-danger" style="font-size:.65rem">{{td $.lang .WarrantyStatus}}</span>
+                        {{else if eq .WarrantyStatus "extended_warranty"}}<span class="badge badge-warning" style="font-size:.65rem">{{td $.lang .WarrantyStatus}}</span>{{end}}
+                        <span class="text-muted ml-1" style="font-size:.7rem">({{len .Tickets}} ticket{{if gt (len .Tickets) 1}}s{{end}})</span>
+                        <a href="/tickets/new?parent={{(index .Tickets 0).Id}}" class="btn btn-tool btn-xs float-right text-info" title="New Job"><i class="fas fa-plus"></i></a>
                     </td>
-                    <td>{{if .Assigned}}{{.Assigned.Name}}{{else}}-{{end}}</td>
-                    <td class="text-sm">{{formatDate .ReceivedAt}}</td>
+                </tr>
+                {{range .Tickets}}
+                <tr class="ticket-child-row">
+                    {{if $canDelete}}<td class="pl-3"><input type="checkbox" class="ticket-select" value="{{.Id}}"></td>{{end}}
+                    <td class="pl-4"><a href="/tickets/{{.Id}}" class="text-primary">#{{.Id}}</a></td>
+                    <td class="text-truncate" style="max-width:250px">{{if .IssueDescription}}{{truncate .IssueDescription 50}}{{else}}<span class="text-muted">-</span>{{end}}</td>
+                    <td><span class="badge status-{{.Status}}" style="font-size:.7rem">{{td $.lang .Status}}</span></td>
                     <td>
-                        <a href="/tickets/{{.Id}}" class="btn btn-xs btn-outline-primary">View</a>
+                        {{if .CustomerRepair}}<span class="badge badge-success" style="font-size:.65rem">CR</span>{{end}}
+                        {{if .RmaNumber}}<span class="badge {{if eq .RmaStatus "complete"}}badge-success{{else if eq .RmaStatus "shipped"}}badge-primary{{else if eq .RmaStatus "processing"}}badge-purple{{else if eq .RmaStatus "returned"}}badge-info{{else}}badge-warning{{end}}" style="font-size:.65rem">{{td $.lang "rma"}}</span>{{end}}
+                    </td>
+                    <td class="text-sm">{{if .Assigned}}{{.Assigned.Name}}{{else}}<span class="text-muted">-</span>{{end}}</td>
+                    <td class="text-muted" style="font-size:.75rem">{{formatDateTZ .ReceivedAt $.userTimezone}}</td>
+                    <td class="text-right pr-2">
+                        <a href="/tickets/{{.Id}}" class="btn btn-xs btn-outline-primary py-0 px-1" style="font-size:.7rem">View</a>
                         {{if or (eq $.currentUser.Role "super_admin") (eq $.currentUser.Role "admin") (eq $.currentUser.Role "technician")}}
-                        <a href="/tickets/{{.Id}}/edit" class="btn btn-xs btn-outline-secondary">Edit</a>
+                        <a href="/tickets/{{.Id}}/edit" class="btn btn-xs btn-outline-secondary py-0 px-1" style="font-size:.7rem">Edit</a>
+                        {{end}}
+                        {{if $canDelete}}
+                        <form method="POST" action="/tickets/{{.Id}}/delete" class="d-inline" onsubmit="return confirm('Delete ticket #{{.Id}} permanently?')">
+                            <button type="submit" class="btn btn-xs btn-outline-danger py-0 px-1" style="font-size:.7rem" title="Delete"><i class="fas fa-trash"></i></button>
+                        </form>
                         {{end}}
                     </td>
                 </tr>
+                {{end}}
                 {{else}}
-                <tr><td colspan="9" class="text-center text-muted py-4">No tickets found</td></tr>
+                <tr><td colspan="{{if $canDelete}}8{{else}}7{{end}}" class="text-center text-muted py-4">No tickets found</td></tr>
                 {{end}}
             </tbody>
         </table>
     </div>
+    {{if gt .totalPages 1}}
+    <div class="card-footer clearfix">
+        <ul class="pagination pagination-sm m-0 float-right">
+            {{if gt .page 1}}
+            <li class="page-item"><a class="page-link" href="?page={{minus .page 1}}{{.filterQuery}}">{{t $.lang "previous"}}</a></li>
+            {{end}}
+            {{if gt (index .pageWindow 0) 1}}
+            <li class="page-item"><a class="page-link" href="?page=1{{.filterQuery}}">1</a></li>
+            {{if gt (index .pageWindow 0) 2}}<li class="page-item disabled"><span class="page-link">&hellip;</span></li>{{end}}
+            {{end}}
+            {{range .pageWindow}}
+            <li class="page-item {{if eq . $.page}}active{{end}}"><a class="page-link" href="?page={{.}}{{$.filterQuery}}">{{.}}</a></li>
+            {{end}}
+            {{$last := index .pageWindow (minus (len .pageWindow) 1)}}
+            {{if lt $last .totalPages}}
+            {{if lt $last (minus .totalPages 1)}}<li class="page-item disabled"><span class="page-link">&hellip;</span></li>{{end}}
+            <li class="page-item"><a class="page-link" href="?page={{.totalPages}}{{.filterQuery}}">{{.totalPages}}</a></li>
+            {{end}}
+            {{if lt .page .totalPages}}
+            <li class="page-item"><a class="page-link" href="?page={{add .page 1}}{{.filterQuery}}">{{t $.lang "next"}}</a></li>
+            {{end}}
+        </ul>
+    </div>
+    {{end}}
 </div>
+{{if $canDelete}}
+<script>
+(function(){
+    function selected(){ return document.querySelectorAll('.ticket-select:checked'); }
+    function refresh(){
+        var n = selected().length;
+        var btn = document.getElementById('pl-bulk-delete');
+        var cnt = document.getElementById('pl-sel-count');
+        if(cnt) cnt.textContent = n;
+        if(btn) btn.disabled = (n === 0);
+        var all = document.getElementById('pl-select-all');
+        var boxes = document.querySelectorAll('.ticket-select');
+        if(all) all.checked = (boxes.length > 0 && n === boxes.length);
+    }
+    document.addEventListener('change', function(e){
+        if(e.target && e.target.id === 'pl-select-all'){
+            document.querySelectorAll('.ticket-select').forEach(function(c){ c.checked = e.target.checked; });
+        }
+        if(e.target && (e.target.classList.contains('ticket-select') || e.target.id === 'pl-select-all')){
+            refresh();
+        }
+    });
+    window.plBulkDelete = function(){
+        var ids = Array.prototype.slice.call(selected()).map(function(c){ return c.value; });
+        if(ids.length === 0){ return; }
+        if(!confirm('Delete ' + ids.length + ' selected ticket(s) permanently?')){ return; }
+        var f = document.createElement('form');
+        f.method = 'POST';
+        f.action = '/tickets/bulk-delete';
+        ids.forEach(function(id){
+            var i = document.createElement('input');
+            i.type = 'hidden'; i.name = 'ticket_ids'; i.value = id;
+            f.appendChild(i);
+        });
+        document.body.appendChild(f);
+        f.submit();
+    };
+    refresh();
+})();
+</script>
+{{end}}
 {{end}}

@@ -1,8 +1,8 @@
 package models
 
 import (
-	"time"
 	"github.com/beego/beego/v2/client/orm"
+	"time"
 )
 
 type Branch struct {

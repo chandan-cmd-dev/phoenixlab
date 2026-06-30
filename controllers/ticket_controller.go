@@ -3,12 +3,23 @@ package controllers
 import (
 	"PhoenixLab/models"
 	"PhoenixLab/services"
+	"net/url"
+	"sort"
 	"strconv"
+	"strings"
 	"time"
 )
 
 type TicketController struct {
 	BaseController
+}
+
+type TicketGroup struct {
+	SerialNumber   string
+	Brand          string
+	Model          string
+	WarrantyStatus string
+	Tickets        []*models.Ticket
 }
 
 func (c *TicketController) List() {
@@ -31,20 +42,57 @@ func (c *TicketController) List() {
 		filters["brand"] = brand
 	}
 
+	page, _ := c.GetInt("page", 1)
+	if page < 1 {
+		page = 1
+	}
+	perPage := 20
+
 	ticketService := services.TicketService{}
-	tickets, err := ticketService.GetByBranch(c.GetBranchScope(), filters)
+	tickets, totalCount, err := ticketService.GetByBranchPaginated(c.GetBranchScope(), filters, page, perPage)
 	if err != nil {
 		c.FlashError("Failed to load tickets: " + err.Error())
 		c.Redirect("/dashboard", 302)
 		return
 	}
 
+	totalPages := int(totalCount) / perPage
+	if int(totalCount)%perPage > 0 {
+		totalPages++
+	}
+
+	pageWindow := c.windowedPages(page, totalPages)
+
 	userService := services.UserService{}
 	technicians, _ := userService.GetAll(c.GetBranchScope(), c.GetCurrentUser().Role)
 
+	var groups []TicketGroup
+	groupMap := make(map[string]int)
+	for _, tk := range tickets {
+		if idx, ok := groupMap[tk.SerialNumber]; ok {
+			groups[idx].Tickets = append(groups[idx].Tickets, tk)
+		} else {
+			groupMap[tk.SerialNumber] = len(groups)
+			groups = append(groups, TicketGroup{
+				SerialNumber:   tk.SerialNumber,
+				Brand:          tk.Brand,
+				Model:          tk.Model,
+				WarrantyStatus: tk.WarrantyStatus,
+				Tickets:        []*models.Ticket{tk},
+			})
+		}
+	}
+
+	c.Data["groups"] = groups
 	c.Data["tickets"] = tickets
 	c.Data["technicians"] = technicians
+	c.Data["brands"] = c.collectBrandOptions(ticketService)
 	c.Data["filters"] = filters
+	c.Data["filterQuery"] = buildFilterQuery(filters)
+	c.Data["page"] = page
+	c.Data["totalPages"] = totalPages
+	c.Data["pageWindow"] = pageWindow
+	c.Data["totalCount"] = int(totalCount)
 	c.Data["title"] = "Tickets"
 	c.SetActivePage("tickets")
 	c.GetFlashMessages()
@@ -54,10 +102,42 @@ func (c *TicketController) List() {
 func (c *TicketController) New() {
 	c.RequireRole("technician", "admin", "super_admin")
 
+	if parentIDStr := c.GetString("parent"); parentIDStr != "" {
+		if parentID, err := strconv.Atoi(parentIDStr); err == nil {
+			ticketService := services.TicketService{}
+			parent, err := ticketService.GetByID(parentID)
+			if err == nil {
+				prefill := &models.Ticket{
+					SerialNumber:   parent.SerialNumber,
+					Brand:          parent.Brand,
+					Model:          parent.Model,
+					Upc:            parent.Upc,
+					IrNumber:       parent.IrNumber,
+					WarrantyStatus: parent.WarrantyStatus,
+					CustomerName:   parent.CustomerName,
+					CustomerEmail:  parent.CustomerEmail,
+					CustomerPhone:  parent.CustomerPhone,
+					ParentTicketId: parent.Id,
+				}
+				c.Data["ticket"] = prefill
+				c.Data["parentTicket"] = parent
+				c.Data["isNewFromParent"] = true
+			}
+		}
+	}
+
+	if linkedIDStr := c.GetString("link"); linkedIDStr != "" {
+		if linkedID, err := strconv.Atoi(linkedIDStr); err == nil {
+			c.Data["prefillLinkedId"] = linkedID
+		}
+	}
+
 	userService := services.UserService{}
 	technicians, _ := userService.GetAll(c.GetBranchScope(), c.GetCurrentUser().Role)
 	c.Data["technicians"] = technicians
-	c.Data["title"] = "Create Ticket"
+	if c.Data["title"] == nil {
+		c.Data["title"] = "Create Ticket"
+	}
 	c.SetActivePage("tickets")
 	c.GetFlashMessages()
 	c.TplName = "tickets/form.html"
@@ -98,6 +178,8 @@ func (c *TicketController) Create() {
 		return
 	}
 
+	c.notifySuperAdmins("create", t.Id, "created this ticket")
+
 	c.FlashSuccess("Ticket created successfully")
 	c.Redirect("/tickets", 302)
 }
@@ -132,9 +214,18 @@ func (c *TicketController) Detail() {
 	commentService := services.CommentService{}
 	comments, _ := commentService.GetByTicket(id)
 
+	relatedTickets, _ := ticketService.GetRelatedTickets(ticket.SerialNumber, ticket.Id)
+
+	workflowService := services.WorkflowService{}
+	workflows, _ := workflowService.GetByTicket(id)
+
 	c.Data["ticket"] = ticket
 	c.Data["auditLogs"] = auditLogs
 	c.Data["comments"] = comments
+	c.Data["relatedTickets"] = relatedTickets
+	c.Data["workflows"] = workflows
+	c.Data["workflowTypes"] = models.WorkflowTypeLabels
+	c.Data["workflowStepLabels"] = models.WorkflowStepLabels
 	c.Data["title"] = "Ticket #" + strconv.Itoa(id)
 	c.SetActivePage("tickets")
 	c.GetFlashMessages()
@@ -224,6 +315,10 @@ func (c *TicketController) Update() {
 		return
 	}
 
+	if len(changedFields) > 0 {
+		c.notifySuperAdmins("update", id, "updated: "+strings.Join(changedFields, ", "))
+	}
+
 	c.FlashSuccess("Ticket updated successfully")
 	c.Redirect("/tickets/"+strconv.Itoa(id), 302)
 }
@@ -255,10 +350,13 @@ func (c *TicketController) UpdateStatus() {
 		return
 	}
 
+	oldStatus := ticket.Status
 	if err := ticketService.UpdateStatus(id, newStatus, c.GetCurrentUser().Id); err != nil {
 		c.RenderError(400, "Failed to update status: "+err.Error())
 		return
 	}
+
+	c.notifySuperAdmins("status", id, "changed status: "+oldStatus+" → "+newStatus)
 
 	c.RenderJSON(map[string]interface{}{
 		"success": true,
@@ -299,6 +397,8 @@ func (c *TicketController) Assign() {
 		return
 	}
 
+	c.notifySuperAdmins("assign", id, "reassigned this ticket")
+
 	c.RenderJSON(map[string]interface{}{
 		"success": true,
 		"message": "Ticket assigned successfully",
@@ -324,6 +424,195 @@ func (c *TicketController) Delete() {
 
 	c.FlashSuccess("Ticket deleted successfully")
 	c.Redirect("/tickets", 302)
+}
+
+func (c *TicketController) BulkDelete() {
+	c.RequireRole("super_admin")
+
+	ids := c.GetStrings("ticket_ids")
+	if len(ids) == 0 {
+		c.FlashError("No tickets selected")
+		c.Redirect("/tickets", 302)
+		return
+	}
+
+	ticketService := services.TicketService{}
+	deleted := 0
+	for _, s := range ids {
+		id, err := strconv.Atoi(s)
+		if err != nil {
+			continue
+		}
+		if err := ticketService.Delete(id, c.GetCurrentUser().Id); err == nil {
+			deleted++
+		}
+	}
+
+	if deleted == 0 {
+		c.FlashError("No tickets were deleted")
+	} else {
+		c.FlashSuccess("Deleted " + strconv.Itoa(deleted) + " ticket(s)")
+	}
+	c.Redirect("/tickets", 302)
+}
+
+func (c *TicketController) StartWorkflow() {
+	c.RequireRole("technician", "admin", "super_admin")
+
+	id, err := c.GetIntParam(":id")
+	if err != nil {
+		c.FlashError("Invalid ticket ID")
+		c.Redirect("/tickets", 302)
+		return
+	}
+
+	workflowType := c.GetString("workflow_type")
+	if workflowType == "" {
+		c.FlashError("Workflow type is required")
+		c.Redirect("/tickets/"+strconv.Itoa(id), 302)
+		return
+	}
+
+	workflowService := services.WorkflowService{}
+	_, err = workflowService.Start(id, workflowType, c.GetCurrentUser().Id)
+	if err != nil {
+		c.FlashError("Failed to start workflow: " + err.Error())
+		c.Redirect("/tickets/"+strconv.Itoa(id), 302)
+		return
+	}
+
+	c.FlashSuccess("Workflow started successfully")
+	c.Redirect("/tickets/"+strconv.Itoa(id), 302)
+}
+
+func (c *TicketController) AdvanceWorkflow() {
+	c.RequireRole("technician", "admin", "super_admin")
+
+	id, err := c.GetIntParam(":id")
+	if err != nil {
+		c.FlashError("Invalid ticket ID")
+		c.Redirect("/tickets", 302)
+		return
+	}
+
+	wfID, err := c.GetInt("workflow_id")
+	if err != nil {
+		c.FlashError("Invalid workflow ID")
+		c.Redirect("/tickets/"+strconv.Itoa(id), 302)
+		return
+	}
+
+	workflowService := services.WorkflowService{}
+	err = workflowService.Advance(wfID, c.GetCurrentUser().Id)
+	if err != nil {
+		c.FlashError("Failed to advance workflow: " + err.Error())
+		c.Redirect("/tickets/"+strconv.Itoa(id), 302)
+		return
+	}
+
+	c.FlashSuccess("Workflow advanced successfully")
+	c.Redirect("/tickets/"+strconv.Itoa(id), 302)
+}
+
+func buildFilterQuery(filters map[string]string) string {
+	keys := make([]string, 0, len(filters))
+	for k := range filters {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+
+	var b strings.Builder
+	for _, k := range keys {
+		v := filters[k]
+		if v == "" {
+			continue
+		}
+		b.WriteString("&")
+		b.WriteString(url.QueryEscape(k))
+		b.WriteString("=")
+		b.WriteString(url.QueryEscape(v))
+	}
+	return b.String()
+}
+
+func (c *TicketController) notifySuperAdmins(action string, ticketID int, summary string) {
+	actor := c.GetCurrentUser()
+	if actor == nil {
+		return
+	}
+	notifyRoles := map[string]bool{
+		string(models.RoleTechnician): true,
+	}
+	if !notifyRoles[actor.Role] {
+		return
+	}
+	(&services.NotificationService{}).NotifySuperAdmins(actor, ticketID, action, summary)
+}
+
+func (c *TicketController) windowedPages(page, totalPages int) []int {
+	const windowSize = 5
+	if totalPages <= 0 {
+		return nil
+	}
+
+	start := page - windowSize/2
+	if start < 1 {
+		start = 1
+	}
+	end := start + windowSize - 1
+	if end > totalPages {
+		end = totalPages
+		if start = end - windowSize + 1; start < 1 {
+			start = 1
+		}
+	}
+
+	pages := make([]int, 0, end-start+1)
+	for i := start; i <= end; i++ {
+		pages = append(pages, i)
+	}
+	return pages
+}
+
+func (c *TicketController) collectBrandOptions(ticketService services.TicketService) []string {
+	scope := c.GetBranchScope()
+	seen := make(map[string]bool)
+
+	options := []string{}
+	for _, b := range []string{"HP", "Lenovo", "Dell"} {
+		seen[strings.ToLower(b)] = true
+		options = append(options, b)
+	}
+
+	var extras []string
+	add := func(b string) {
+		b = strings.TrimSpace(b)
+		if b == "" {
+			return
+		}
+		key := strings.ToLower(b)
+		if seen[key] {
+			return
+		}
+		seen[key] = true
+		extras = append(extras, b)
+	}
+
+	if brands, err := ticketService.GetDistinctBrands(scope); err == nil {
+		for _, b := range brands {
+			add(b)
+		}
+	}
+
+	connSvc := services.SheetConnectionService{}
+	if conns, err := connSvc.List(scope); err == nil {
+		for _, conn := range conns {
+			add(conn.Brand)
+		}
+	}
+
+	sort.Strings(extras)
+	return append(options, extras...)
 }
 
 func (c *TicketController) getCurrentUserCanEditTicket(ticket *models.Ticket) bool {
@@ -445,6 +734,24 @@ func (c *TicketController) getChangedFields(original, updated *models.Ticket) []
 	}
 	if original.Notes != updated.Notes {
 		fields = append(fields, "Notes")
+	}
+	if original.CustomerRepair != updated.CustomerRepair {
+		fields = append(fields, "CustomerRepair")
+	}
+	if original.LinkedTicketId != updated.LinkedTicketId {
+		fields = append(fields, "LinkedTicketId")
+	}
+	if original.ParentTicketId != updated.ParentTicketId {
+		fields = append(fields, "ParentTicketId")
+	}
+	if original.RmaNumber != updated.RmaNumber {
+		fields = append(fields, "RmaNumber")
+	}
+	if original.RmaRefNumber != updated.RmaRefNumber {
+		fields = append(fields, "RmaRefNumber")
+	}
+	if original.RmaStatus != updated.RmaStatus {
+		fields = append(fields, "RmaStatus")
 	}
 
 	return fields

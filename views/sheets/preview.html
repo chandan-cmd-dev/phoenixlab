@@ -1,0 +1,48 @@
+{{template "layouts/base.html" .}}
+
+{{define "LayoutContent"}}
+<div class="row">
+    <div class="col-12 mb-2">
+        <a href="/sheets" class="btn btn-sm btn-default"><i class="fas fa-arrow-left mr-1"></i>All Connections</a>
+        <a href="/sheets/{{.conn.Id}}/mapping" class="btn btn-sm btn-default"><i class="fas fa-columns mr-1"></i>Edit Mapping</a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card card-outline card-primary">
+            <div class="card-header">
+                <h3 class="card-title">{{if .conn.SpreadsheetTitle}}{{.conn.SpreadsheetTitle}}{{end}} &mdash; {{.conn.TabName}}</h3>
+                <span class="badge badge-info float-right">{{statusLabel .conn.SyncDirection}}</span>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col"><div class="description-block"><h2 class="text-success">{{.preview.Creates}}</h2><span class="description-text">CREATE</span></div></div>
+                    <div class="col"><div class="description-block"><h2 class="text-primary">{{.preview.Adopts}}</h2><span class="description-text">ADOPT</span></div></div>
+                    <div class="col"><div class="description-block"><h2 class="text-info">{{.preview.Updates}}</h2><span class="description-text">UPDATE</span></div></div>
+                    <div class="col"><div class="description-block"><h2 class="text-warning">{{.preview.Ambiguous}}</h2><span class="description-text">AMBIGUOUS</span></div></div>
+                    <div class="col"><div class="description-block"><h2 class="text-muted">{{.preview.Skipped}}</h2><span class="description-text">SKIPPED</span></div></div>
+                    <div class="col"><div class="description-block"><h2>{{.preview.Total}}</h2><span class="description-text">TOTAL ROWS</span></div></div>
+                </div>
+            </div>
+            <div class="card-footer">
+                <form method="POST" action="/sheets/{{.conn.Id}}/import" class="d-inline">
+                    <button class="btn btn-success"><i class="fas fa-download mr-1"></i>Import (Pull)</button>
+                </form>
+                {{if eq .conn.SyncDirection "two_way"}}
+                <form method="POST" action="/sheets/{{.conn.Id}}/reconcile" class="d-inline" onsubmit="return confirm('Reconcile will write agreed changes back to the sheet. Continue?');">
+                    <button class="btn btn-primary"><i class="fas fa-sync mr-1"></i>Two-way Reconcile</button>
+                </form>
+                {{end}}
+                {{if ne .conn.SyncDirection "pull"}}
+                <a href="/sheets/{{.conn.Id}}/push" class="btn btn-outline-primary"><i class="fas fa-upload mr-1"></i>Push&hellip;</a>
+                {{end}}
+                <div class="float-right">
+                    <a href="/sheets/{{.conn.Id}}/conflicts" class="btn btn-outline-danger">Conflicts <span class="badge badge-danger">{{.openConflicts}}</span></a>
+                    <a href="/sheets/{{.conn.Id}}/adoptions" class="btn btn-outline-warning">Adoptions <span class="badge badge-warning">{{.openAdoptions}}</span></a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{{end}}

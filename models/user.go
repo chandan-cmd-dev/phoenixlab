@@ -22,6 +22,7 @@ type User struct {
 	PasswordHash string    `orm:"size(255)" json:"-"`
 	Role         string    `orm:"size(50)" json:"role" form:"role" validate:"required,oneof=super_admin admin technician viewer"`
 	BranchId     int       `orm:"column(branch_id)" json:"branch_id" form:"branch_id"`
+	Language     string    `orm:"size(10);default(en)" json:"language" form:"language"`
 	IsActive     bool      `orm:"default(true)" json:"is_active"`
 	LastLoginAt  time.Time `orm:"null;type(timestamptz)" json:"last_login_at"`
 	CreatedBy    int       `orm:"column(created_by)" json:"created_by"`

@@ -17,6 +17,7 @@ type ImportService struct{}
 type ImportResult struct {
 	TotalRows int
 	Imported  int
+	Updated   int
 	Skipped   int
 	Errors    []string
 	SheetName string
@@ -133,17 +134,68 @@ func (s *ImportService) importSheet(f *excelize.File, sheetName string, branchID
 
 		ticket.CaseFinished = isYes(getCellValue(row, colMap["case_finished"]))
 
-		ticket.AssignedTo = userID
-		_, err := o.Insert(ticket)
-		if err != nil {
-			result.Errors = append(result.Errors, fmt.Sprintf("Row %d (SN: %s): %v", i+1, sn, err))
-			result.Skipped++
-			continue
-		}
-		o.Raw("UPDATE tickets SET assigned_to = NULL WHERE id = ?", ticket.Id).Exec()
+		var existing models.Ticket
+		existErr := o.QueryTable("tickets").
+			Filter("SerialNumber", ticket.SerialNumber).
+			Filter("IssueDescription", ticket.IssueDescription).
+			One(&existing)
 
-		audit.Log("ticket", ticket.Id, "create", "", "", "Imported from Excel: "+sheetName, userID, "")
-		result.Imported++
+		if existErr == nil {
+			existing.Upc = ticket.Upc
+			existing.IrNumber = ticket.IrNumber
+			existing.DiagnosticCode = ticket.DiagnosticCode
+			existing.NeededPart = ticket.NeededPart
+			existing.ProblemDescription = ticket.ProblemDescription
+			existing.Status = ticket.Status
+			existing.MachinePurchasePrice = ticket.MachinePurchasePrice
+			existing.PartNumber = ticket.PartNumber
+			existing.PartsCost = ticket.PartsCost
+			existing.LabourCost = ticket.LabourCost
+			existing.PoNumber = ticket.PoNumber
+			existing.CaseNumber = ticket.CaseNumber
+			existing.WorkOrderNumber = ticket.WorkOrderNumber
+			existing.ReturnPart = ticket.ReturnPart
+			existing.PartArrivedFixed = ticket.PartArrivedFixed
+			existing.DefectivePartShipped = ticket.DefectivePartShipped
+			existing.CaseFinished = ticket.CaseFinished
+			if ticket.CustomerName != "" {
+				existing.CustomerName = ticket.CustomerName
+			}
+			_, err := o.Update(&existing, "Upc", "IrNumber", "DiagnosticCode", "NeededPart",
+				"ProblemDescription", "Status", "MachinePurchasePrice", "PartNumber",
+				"PartsCost", "LabourCost", "PoNumber", "CaseNumber", "WorkOrderNumber",
+				"ReturnPart", "PartArrivedFixed", "DefectivePartShipped", "CaseFinished",
+				"CustomerName", "UpdatedAt")
+			if err != nil {
+				result.Errors = append(result.Errors, fmt.Sprintf("Row %d (SN: %s): update failed: %v", i+1, sn, err))
+				result.Skipped++
+				continue
+			}
+			audit.Log("ticket", existing.Id, "update", "", "", "Updated from Excel: "+sheetName, userID, "")
+			result.Updated++
+		} else {
+			var parentTicket models.Ticket
+			parentErr := o.QueryTable("tickets").
+				Filter("SerialNumber", ticket.SerialNumber).
+				OrderBy("CreatedAt").
+				Limit(1).
+				One(&parentTicket)
+			if parentErr == nil {
+				ticket.ParentTicketId = parentTicket.Id
+			}
+
+			ticket.AssignedTo = userID
+			_, err := o.Insert(ticket)
+			if err != nil {
+				result.Errors = append(result.Errors, fmt.Sprintf("Row %d (SN: %s): %v", i+1, sn, err))
+				result.Skipped++
+				continue
+			}
+			o.Raw("UPDATE tickets SET assigned_to = NULL WHERE id = ?", ticket.Id).Exec()
+
+			audit.Log("ticket", ticket.Id, "create", "", "", "Imported from Excel: "+sheetName, userID, "")
+			result.Imported++
+		}
 	}
 
 	return result

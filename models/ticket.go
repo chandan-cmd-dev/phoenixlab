@@ -1,12 +1,12 @@
 package models
 
 import (
+	"encoding/json"
 	"time"
 )
 
 type WarrantyStatus string
 type TicketStatus string
-type Priority string
 
 const (
 	WarrantyIn       WarrantyStatus = "in_warranty"
@@ -23,11 +23,6 @@ const (
 	StatusClosed       TicketStatus = "closed"
 	StatusOnHold       TicketStatus = "on_hold"
 	StatusCancelled    TicketStatus = "cancelled"
-
-	PriorityLow      Priority = "low"
-	PriorityNormal   Priority = "normal"
-	PriorityHigh     Priority = "high"
-	PriorityCritical Priority = "critical"
 )
 
 type Ticket struct {
@@ -43,7 +38,10 @@ type Ticket struct {
 	IssueCategory        string    `orm:"null;size(30)" json:"issue_category" form:"issue_category"`
 	AssignedTo           int       `orm:"null;column(assigned_to)" json:"assigned_to" form:"assigned_to"`
 	Priority             string    `orm:"size(20);default(normal)" json:"priority" form:"priority"`
+	CustomerRepair       bool      `orm:"default(false)" json:"customer_repair" form:"customer_repair"`
 	Status               string    `orm:"size(30);default(open)" json:"status" form:"status"`
+	ParentTicketId       int       `orm:"null;column(parent_ticket_id)" json:"parent_ticket_id" form:"parent_ticket_id"`
+	LinkedTicketId       int       `orm:"null;column(linked_ticket_id)" json:"linked_ticket_id" form:"linked_ticket_id"`
 	DiagnosticCode       string    `orm:"null;size(200)" json:"diagnostic_code" form:"diagnostic_code"`
 	NeededPart           string    `orm:"null;size(200)" json:"needed_part" form:"needed_part"`
 	ProblemDescription   string    `orm:"null;type(text)" json:"problem_description" form:"problem_description"`
@@ -65,6 +63,9 @@ type Ticket struct {
 	CustomerName         string    `orm:"null;size(150)" json:"customer_name" form:"customer_name"`
 	CustomerEmail        string    `orm:"null;size(200)" json:"customer_email" form:"customer_email"`
 	CustomerPhone        string    `orm:"null;size(50)" json:"customer_phone" form:"customer_phone"`
+	RmaNumber            string    `orm:"null;size(100)" json:"rma_number" form:"rma_number"`
+	RmaRefNumber         string    `orm:"null;size(100)" json:"rma_ref_number" form:"rma_ref_number"`
+	RmaStatus            string    `orm:"null;size(30)" json:"rma_status" form:"rma_status"`
 	OdooTicketId         string    `orm:"null;size(100)" json:"odoo_ticket_id"`
 	OdooSyncedAt         time.Time `orm:"null;type(timestamptz)" json:"odoo_synced_at"`
 	ReceivedAt           time.Time `orm:"type(timestamptz)" json:"received_at"`
@@ -73,12 +74,15 @@ type Ticket struct {
 	CreatedBy            int       `orm:"column(created_by)" json:"created_by"`
 	Version              int       `orm:"default(1)" json:"version" form:"version"`
 	Notes                string    `orm:"null;type(text)" json:"notes" form:"notes"`
+	CustomFields         string    `orm:"null;type(jsonb)" json:"custom_fields"`
 	CreatedAt            time.Time `orm:"auto_now_add;type(timestamptz)" json:"created_at"`
 	UpdatedAt            time.Time `orm:"auto_now;type(timestamptz)" json:"updated_at"`
 
-	Branch   *Branch `orm:"-" json:"branch,omitempty"`
-	Assigned *User   `orm:"-" json:"assigned_user,omitempty"`
-	Creator  *User   `orm:"-" json:"creator,omitempty"`
+	Branch       *Branch `orm:"-" json:"branch,omitempty"`
+	Assigned     *User   `orm:"-" json:"assigned_user,omitempty"`
+	Creator      *User   `orm:"-" json:"creator,omitempty"`
+	ParentTicket *Ticket `orm:"-" json:"parent_ticket,omitempty"`
+	LinkedTicket *Ticket `orm:"-" json:"linked_ticket,omitempty"`
 }
 
 func (t *Ticket) TableName() string {
@@ -99,20 +103,59 @@ func (t *Ticket) GetTATHours() float64 {
 	return t.ResolvedAt.Sub(t.ReceivedAt).Hours()
 }
 
+func (t *Ticket) GetAllowedTransitions() []string {
+	transitions := map[string][]string{
+		string(StatusOpen):         {string(StatusDiagnosing), string(StatusPartsOrdered), string(StatusInRepair), string(StatusQC), string(StatusResolved), string(StatusClosed), string(StatusOnHold), string(StatusCancelled)},
+		string(StatusDiagnosing):   {string(StatusPartsOrdered), string(StatusPartApplied), string(StatusInRepair), string(StatusQC), string(StatusResolved), string(StatusClosed), string(StatusOnHold), string(StatusCancelled)},
+		string(StatusPartsOrdered): {string(StatusPartApplied), string(StatusInRepair), string(StatusQC), string(StatusResolved), string(StatusClosed), string(StatusOnHold), string(StatusCancelled)},
+		string(StatusPartApplied):  {string(StatusInRepair), string(StatusQC), string(StatusResolved), string(StatusClosed), string(StatusOnHold), string(StatusCancelled)},
+		string(StatusInRepair):     {string(StatusQC), string(StatusResolved), string(StatusClosed), string(StatusOnHold), string(StatusCancelled)},
+		string(StatusQC):           {string(StatusResolved), string(StatusInRepair), string(StatusClosed), string(StatusOnHold), string(StatusCancelled)},
+		string(StatusResolved):     {string(StatusClosed), string(StatusOpen)},
+		string(StatusOnHold):       {string(StatusOpen), string(StatusDiagnosing), string(StatusPartsOrdered), string(StatusPartApplied), string(StatusInRepair), string(StatusQC), string(StatusResolved), string(StatusClosed)},
+		string(StatusCancelled):    {string(StatusOpen)},
+		string(StatusClosed):       {string(StatusOpen)},
+	}
+	if allowed, ok := transitions[t.Status]; ok {
+		return allowed
+	}
+	return nil
+}
+
+func (t *Ticket) GetCustomFields() map[string]string {
+	m := make(map[string]string)
+	if t.CustomFields == "" {
+		return m
+	}
+	_ = json.Unmarshal([]byte(t.CustomFields), &m)
+	if m == nil {
+		m = make(map[string]string)
+	}
+	return m
+}
+
+func (t *Ticket) SetCustomField(key, value string) {
+	m := t.GetCustomFields()
+	m[key] = value
+	if b, err := json.Marshal(m); err == nil {
+		t.CustomFields = string(b)
+	}
+}
+
 func (t *Ticket) CanTransitionTo(newStatus string) bool {
 	current := t.Status
 
 	validTransitions := map[string][]string{
-		string(StatusOpen):         {string(StatusDiagnosing), string(StatusInRepair), string(StatusOnHold), string(StatusCancelled)},
-		string(StatusDiagnosing):   {string(StatusPartsOrdered), string(StatusInRepair), string(StatusOnHold), string(StatusCancelled)},
-		string(StatusPartsOrdered): {string(StatusPartApplied), string(StatusInRepair), string(StatusOnHold), string(StatusCancelled)},
+		string(StatusOpen):         {string(StatusDiagnosing), string(StatusPartsOrdered), string(StatusInRepair), string(StatusQC), string(StatusResolved), string(StatusClosed), string(StatusOnHold), string(StatusCancelled)},
+		string(StatusDiagnosing):   {string(StatusPartsOrdered), string(StatusPartApplied), string(StatusInRepair), string(StatusQC), string(StatusResolved), string(StatusClosed), string(StatusOnHold), string(StatusCancelled)},
+		string(StatusPartsOrdered): {string(StatusPartApplied), string(StatusInRepair), string(StatusQC), string(StatusResolved), string(StatusClosed), string(StatusOnHold), string(StatusCancelled)},
 		string(StatusPartApplied):  {string(StatusInRepair), string(StatusQC), string(StatusResolved), string(StatusClosed), string(StatusOnHold), string(StatusCancelled)},
-		string(StatusInRepair):     {string(StatusQC), string(StatusOnHold), string(StatusCancelled)},
-		string(StatusQC):           {string(StatusResolved), string(StatusInRepair), string(StatusOnHold), string(StatusCancelled)},
-		string(StatusResolved):     {string(StatusClosed)},
-		string(StatusOnHold):       {string(StatusOpen), string(StatusDiagnosing), string(StatusPartsOrdered), string(StatusInRepair), string(StatusQC)},
-		string(StatusCancelled):    {},
-		string(StatusClosed):       {},
+		string(StatusInRepair):     {string(StatusQC), string(StatusResolved), string(StatusClosed), string(StatusOnHold), string(StatusCancelled)},
+		string(StatusQC):           {string(StatusResolved), string(StatusInRepair), string(StatusClosed), string(StatusOnHold), string(StatusCancelled)},
+		string(StatusResolved):     {string(StatusClosed), string(StatusOpen)},
+		string(StatusOnHold):       {string(StatusOpen), string(StatusDiagnosing), string(StatusPartsOrdered), string(StatusPartApplied), string(StatusInRepair), string(StatusQC), string(StatusResolved), string(StatusClosed)},
+		string(StatusCancelled):    {string(StatusOpen)},
+		string(StatusClosed):       {string(StatusOpen)},
 	}
 
 	allowed, exists := validTransitions[current]

@@ -21,8 +21,8 @@
             <div class="card-header">
                 <h3 class="card-title"><code class="text-lg">{{.ticket.SerialNumber}}</code></h3>
                 <div class="card-tools">
-                    <span class="badge status-{{.ticket.Status}} mr-1">{{statusLabel .ticket.Status}}</span>
-                    <span class="badge {{if eq .ticket.Priority "critical"}}badge-danger{{else if eq .ticket.Priority "high"}}badge-warning{{else if eq .ticket.Priority "low"}}badge-secondary{{else}}badge-info{{end}}">{{.ticket.Priority}}</span>
+                    <span class="badge status-{{.ticket.Status}} mr-1">{{td $.lang .ticket.Status}}</span>
+                    {{if .ticket.CustomerRepair}}<span class="badge badge-success">{{t $.lang "customer_repair"}}</span>{{end}}
                 </div>
             </div>
             <div class="card-body">
@@ -30,12 +30,9 @@
                 <div class="mb-3">
                     <small class="text-muted d-block mb-1">Update Status</small>
                     <div id="status-buttons">
-                        {{$status := .ticket.Status}}
                         {{$id := .ticket.Id}}
-                        {{range $s := list "open" "diagnosing" "parts_ordered" "part_applied" "in_repair" "qc_check" "resolved" "closed" "on_hold" "cancelled"}}
-                        {{if not (eq $s $status)}}
-                        <button onclick="updateStatus({{$id}}, '{{$s}}')" class="btn btn-outline-secondary btn-xs mb-1">{{statusLabel $s}}</button>
-                        {{end}}
+                        {{range $s := .ticket.GetAllowedTransitions}}
+                        <button onclick="updateStatus({{$id}}, '{{$s}}')" class="btn btn-outline-secondary btn-xs mb-1">{{td $.lang $s}}</button>
                         {{end}}
                     </div>
                 </div>
@@ -46,8 +43,8 @@
             <div class="card-header"><h3 class="card-title">Issue Details</h3></div>
             <div class="card-body">
                 <div class="row text-sm">
-                    <div class="col-6 mb-2"><strong>Category:</strong> {{if .ticket.IssueCategory}}{{statusLabel .ticket.IssueCategory}}{{else}}-{{end}}</div>
-                    <div class="col-6 mb-2"><strong>Warranty:</strong> {{statusLabel .ticket.WarrantyStatus}}</div>
+                    <div class="col-6 mb-2"><strong>{{t $.lang "category"}}:</strong> {{if .ticket.IssueCategory}}{{td $.lang .ticket.IssueCategory}}{{else}}-{{end}}</div>
+                    <div class="col-6 mb-2"><strong>{{t $.lang "warranty"}}:</strong> {{td $.lang .ticket.WarrantyStatus}}</div>
                     <div class="col-6 mb-2"><strong>IR / Product #:</strong> <code>{{if .ticket.IrNumber}}{{.ticket.IrNumber}}{{else}}-{{end}}</code></div>
                     <div class="col-6 mb-2"><strong>UPC:</strong> <code>{{if .ticket.Upc}}{{.ticket.Upc}}{{else}}-{{end}}</code></div>
                     <div class="col-6 mb-2"><strong>Diagnostic Code:</strong> {{if .ticket.DiagnosticCode}}{{.ticket.DiagnosticCode}}{{else}}-{{end}}</div>
@@ -89,7 +86,7 @@
                     <div class="col-6 mb-2"><i class="fas {{if .ticket.PartArrivedFixed}}fa-check-circle text-success{{else}}fa-times-circle text-muted{{end}} mr-1"></i>Part arrived &amp; fixed</div>
                     <div class="col-6 mb-2"><strong>Defective Part Shipped:</strong>
                         <span class="{{if eq .ticket.DefectivePartShipped "YES"}}text-success font-weight-bold{{else if eq .ticket.DefectivePartShipped "NO"}}text-danger{{else}}text-muted{{end}}">
-                            {{if .ticket.DefectivePartShipped}}{{.ticket.DefectivePartShipped}}{{else}}-{{end}}
+                            {{if .ticket.DefectivePartShipped}}{{td $.lang .ticket.DefectivePartShipped}}{{else}}-{{end}}
                         </span>
                     </div>
                     <div class="col-6 mb-2"><i class="fas {{if .ticket.CaseFinished}}fa-check-circle text-success{{else}}fa-times-circle text-muted{{end}} mr-1"></i>Case finished</div>
@@ -147,6 +144,32 @@
             </div>
         </div>
 
+        {{if .ticket.RmaNumber}}
+        <div class="card card-outline card-purple">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-undo-alt mr-1"></i>RMA</h3>
+                <div class="card-tools">
+                    {{if eq .ticket.RmaStatus "complete"}}<span class="badge badge-success">{{td $.lang .ticket.RmaStatus}}</span>
+                    {{else if eq .ticket.RmaStatus "returned"}}<span class="badge badge-info">{{td $.lang .ticket.RmaStatus}}</span>
+                    {{else if eq .ticket.RmaStatus "processing"}}<span class="badge" style="background:#6f42c1;color:#fff">{{td $.lang .ticket.RmaStatus}}</span>
+                    {{else if eq .ticket.RmaStatus "shipped"}}<span class="badge badge-primary">{{td $.lang .ticket.RmaStatus}}</span>
+                    {{else if eq .ticket.RmaStatus "initiated"}}<span class="badge badge-warning">{{td $.lang .ticket.RmaStatus}}</span>
+                    {{else}}<span class="badge badge-secondary">{{t $.lang "pending"}}</span>{{end}}
+                </div>
+            </div>
+            <div class="card-body text-sm">
+                <dl class="mb-0">
+                    <dt>RMA Number</dt><dd><code>{{.ticket.RmaNumber}}</code></dd>
+                    {{if .ticket.RmaRefNumber}}<dt>Reference Number</dt><dd><code>{{.ticket.RmaRefNumber}}</code></dd>{{end}}
+                    <dt>{{t $.lang "status"}}</dt>
+                    <dd>
+                        {{if .ticket.RmaStatus}}{{td $.lang .ticket.RmaStatus}}{{else}}{{t $.lang "pending"}}{{end}}
+                    </dd>
+                </dl>
+            </div>
+        </div>
+        {{end}}
+
         <div class="card collapsed-card">
             <div class="card-header">
                 <h3 class="card-title"><i class="fas fa-history mr-1"></i>Activity Log</h3>
@@ -190,13 +213,13 @@
             <div class="card-header"><h3 class="card-title">Timeline</h3></div>
             <div class="card-body text-sm">
                 <dl class="mb-0">
-                    <dt>Received</dt><dd>{{formatDate .ticket.ReceivedAt}}</dd>
+                    <dt>Received</dt><dd>{{formatDateTZ .ticket.ReceivedAt $.userTimezone}}</dd>
                     {{if not .ticket.DueDate.IsZero}}
                     <dt>Due</dt>
-                    <dd>{{formatDate .ticket.DueDate}}{{if .ticket.IsOverdue}} <span class="badge badge-danger">Overdue</span>{{end}}</dd>
+                    <dd>{{formatDateTZ .ticket.DueDate $.userTimezone}}{{if .ticket.IsOverdue}} <span class="badge badge-danger">Overdue</span>{{end}}</dd>
                     {{end}}
                     {{if not .ticket.ResolvedAt.IsZero}}
-                    <dt>Resolved</dt><dd class="text-success">{{formatDate .ticket.ResolvedAt}}</dd>
+                    <dt>Resolved</dt><dd class="text-success">{{formatDateTZ .ticket.ResolvedAt $.userTimezone}}</dd>
                     {{end}}
                     <dt>TAT</dt><dd class="font-weight-bold">{{formatTAT .ticket.GetTATHours}}</dd>
                 </dl>
@@ -220,6 +243,50 @@
             <div class="card-body text-sm">Tracking: {{if .ticket.ReturnTracking}}{{.ticket.ReturnTracking}}{{else}}-{{end}}</div>
         </div>
         {{end}}
+
+        {{if .ticket.ParentTicket}}
+        <div class="card card-outline card-info">
+            <div class="card-header"><h3 class="card-title"><i class="fas fa-link mr-1"></i>Parent Ticket</h3></div>
+            <div class="card-body text-sm">
+                <a href="/tickets/{{.ticket.ParentTicket.Id}}">Ticket #{{.ticket.ParentTicket.Id}}</a>
+                <span class="text-muted">— {{.ticket.ParentTicket.SerialNumber}}</span>
+                {{if .ticket.ParentTicket.IssueDescription}}<br><small class="text-muted">{{.ticket.ParentTicket.IssueDescription}}</small>{{end}}
+            </div>
+        </div>
+        {{end}}
+
+        {{if .ticket.LinkedTicket}}
+        <div class="card card-outline card-info">
+            <div class="card-header"><h3 class="card-title"><i class="fas fa-exchange-alt mr-1"></i>Linked Ticket</h3></div>
+            <div class="card-body text-sm">
+                <a href="/tickets/{{.ticket.LinkedTicket.Id}}">Ticket #{{.ticket.LinkedTicket.Id}}</a>
+                <span class="text-muted">— {{.ticket.LinkedTicket.SerialNumber}}</span>
+            </div>
+        </div>
+        {{end}}
+
+        {{if .relatedTickets}}
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-sitemap mr-1"></i>Related Tickets</h3>
+            </div>
+            <div class="card-body p-0">
+                <table class="table table-sm mb-0">
+                    {{range .relatedTickets}}
+                    <tr>
+                        <td><a href="/tickets/{{.Id}}">#{{.Id}}</a></td>
+                        <td>{{if .IssueDescription}}{{truncate .IssueDescription 30}}{{else}}-{{end}}</td>
+                        <td><span class="badge status-{{.Status}}">{{td $.lang .Status}}</span></td>
+                    </tr>
+                    {{end}}
+                </table>
+            </div>
+        </div>
+        {{end}}
+
+        <div class="mb-2">
+            <a href="/tickets/new?parent={{.ticket.Id}}" class="btn btn-outline-info btn-sm btn-block"><i class="fas fa-plus mr-1"></i>New Job for this S/N</a>
+        </div>
     </div>
 </div>
 

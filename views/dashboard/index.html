@@ -23,7 +23,9 @@
                 <h3 class="card-title">Monthly Volume &amp; Resolution</h3>
             </div>
             <div class="card-body">
-                <canvas id="monthlyChart" height="200"></canvas>
+                <div style="position:relative;height:260px">
+                    <canvas id="monthlyChart"></canvas>
+                </div>
             </div>
         </div>
     </div>
@@ -33,7 +35,9 @@
                 <h3 class="card-title">Ticket Status Distribution</h3>
             </div>
             <div class="card-body">
-                <canvas id="statusChart" height="200"></canvas>
+                <div style="position:relative;height:260px">
+                    <canvas id="statusChart"></canvas>
+                </div>
             </div>
         </div>
     </div>
@@ -65,7 +69,7 @@
                     <td><a href="/tickets/{{.Id}}"><code>{{.SerialNumber}}</code></a></td>
                     <td>{{.Brand}} {{.Model}}</td>
                     <td>{{truncate .IssueDescription 50}}</td>
-                    <td><span class="badge status-{{.Status}}">{{statusLabel .Status}}</span></td>
+                    <td><span class="badge status-{{.Status}}">{{td $.lang .Status}}</span></td>
                     <td>{{.AssignedToName}}</td>
                     <td>{{formatTAT .TATHours}}</td>
                     <td><a href="/tickets/{{.Id}}" class="btn btn-xs btn-outline-primary">Open</a></td>
@@ -77,4 +81,51 @@
         </table>
     </div>
 </div>
+
+<script>
+(function(){
+    if(!window.Chart){ return; }
+    var mEl = document.getElementById('monthlyChart');
+    if(mEl){
+        new Chart(mEl, {
+            type: 'bar',
+            data: {
+                labels: {{.monthLabels}},
+                datasets: [
+                    { label: 'Received', data: {{.monthReceived}}, backgroundColor: 'rgba(60,141,188,0.75)' },
+                    { label: 'Resolved', data: {{.monthResolved}}, backgroundColor: 'rgba(40,167,69,0.75)' }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
+            }
+        });
+    }
+    var sEl = document.getElementById('statusChart');
+    if(sEl){
+        var sLabels = {{.statusLabels}};
+        if(sLabels.length === 0){
+            sEl.parentNode.innerHTML = '<div class="text-center text-muted py-5">No ticket data</div>';
+        } else {
+            new Chart(sEl, {
+                type: 'doughnut',
+                data: {
+                    labels: sLabels,
+                    datasets: [{
+                        data: {{.statusCounts}},
+                        backgroundColor: ['#f56954','#f39c12','#00c0ef','#605ca8','#3c8dbc','#00a65a','#28a745','#6c757d','#ff851b','#dc3545']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: 'right' } }
+                }
+            });
+        }
+    }
+})();
+</script>
 {{end}}

@@ -8,7 +8,7 @@
         <div class="card-header"><h3 class="card-title">Sheet: {{.SheetName}}</h3></div>
         <div class="card-body">
             <div class="row text-center">
-                <div class="col-4">
+                <div class="col-3">
                     <div class="info-box bg-light mb-0">
                         <div class="info-box-content">
                             <span class="info-box-number">{{.TotalRows}}</span>
@@ -16,15 +16,23 @@
                         </div>
                     </div>
                 </div>
-                <div class="col-4">
+                <div class="col-3">
                     <div class="info-box bg-success mb-0">
                         <div class="info-box-content">
                             <span class="info-box-number">{{.Imported}}</span>
-                            <span class="info-box-text">Imported</span>
+                            <span class="info-box-text">Created</span>
                         </div>
                     </div>
                 </div>
-                <div class="col-4">
+                <div class="col-3">
+                    <div class="info-box bg-info mb-0">
+                        <div class="info-box-content">
+                            <span class="info-box-number">{{.Updated}}</span>
+                            <span class="info-box-text">Updated</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-3">
                     <div class="info-box bg-warning mb-0">
                         <div class="info-box-content">
                             <span class="info-box-number">{{.Skipped}}</span>

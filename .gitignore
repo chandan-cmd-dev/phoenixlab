@@ -1,0 +1,17 @@
+pgdata/
+
+backups/
+
+logs/
+
+.env
+
+main
+*.exe
+
+.idea/
+.vscode/
+*.swp
+*.swo
+
+.DS_Store
