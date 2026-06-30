@@ -321,10 +321,9 @@ func (s *SheetSyncService) applyCreate(o orm.Ormer, ctx *syncContext, act rowAct
 	if strings.TrimSpace(t.SerialNumber) == "" {
 		return fmt.Errorf("missing serial number")
 	}
-	if _, err := o.Insert(t); err != nil {
+	if err := insertTicket(o, t, userID); err != nil {
 		return err
 	}
-	o.Raw("UPDATE tickets SET assigned_to = NULL WHERE id = ?", t.Id).Exec()
 	audit.Log("ticket", t.Id, "create", "", "", "Imported from Google Sheet: "+ctx.conn.TabName, userID, "")
 	s.upsertLink(o, ctx, act, t)
 	return nil

@@ -66,10 +66,9 @@ func (s *SheetAdoptionService) Resolve(connID int, decisions map[int]string, use
 
 		case decision == "new":
 			t := newTicketFromData(conn, data, userID)
-			if _, err := o.Insert(t); err != nil {
+			if err := insertTicket(o, t, userID); err != nil {
 				continue
 			}
-			o.Raw("UPDATE tickets SET assigned_to = NULL WHERE id = ?", t.Id).Exec()
 			audit.Log("ticket", t.Id, "create", "", "", "Created via adoption review", userID, "")
 			s.upsertLink(o, conn.Id, a.SheetRowUid, t, data)
 			a.Status = "resolved"
