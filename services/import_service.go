@@ -184,14 +184,12 @@ func (s *ImportService) importSheet(f *excelize.File, sheetName string, branchID
 				ticket.ParentTicketId = parentTicket.Id
 			}
 
-			ticket.AssignedTo = userID
-			_, err := o.Insert(ticket)
-			if err != nil {
+			ticket.AssignedTo = 0
+			if err := insertTicket(o, ticket, userID); err != nil {
 				result.Errors = append(result.Errors, fmt.Sprintf("Row %d (SN: %s): %v", i+1, sn, err))
 				result.Skipped++
 				continue
 			}
-			o.Raw("UPDATE tickets SET assigned_to = NULL WHERE id = ?", ticket.Id).Exec()
 
 			audit.Log("ticket", ticket.Id, "create", "", "", "Imported from Excel: "+sheetName, userID, "")
 			result.Imported++
