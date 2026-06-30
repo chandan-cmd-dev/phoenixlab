@@ -178,6 +178,8 @@ func (c *TicketController) Create() {
 		return
 	}
 
+	c.notifySuperAdmins("create", t.Id, "created this ticket")
+
 	c.FlashSuccess("Ticket created successfully")
 	c.Redirect("/tickets", 302)
 }
@@ -313,6 +315,10 @@ func (c *TicketController) Update() {
 		return
 	}
 
+	if len(changedFields) > 0 {
+		c.notifySuperAdmins("update", id, "updated: "+strings.Join(changedFields, ", "))
+	}
+
 	c.FlashSuccess("Ticket updated successfully")
 	c.Redirect("/tickets/"+strconv.Itoa(id), 302)
 }
@@ -344,10 +350,13 @@ func (c *TicketController) UpdateStatus() {
 		return
 	}
 
+	oldStatus := ticket.Status
 	if err := ticketService.UpdateStatus(id, newStatus, c.GetCurrentUser().Id); err != nil {
 		c.RenderError(400, "Failed to update status: "+err.Error())
 		return
 	}
+
+	c.notifySuperAdmins("status", id, "changed status: "+oldStatus+" → "+newStatus)
 
 	c.RenderJSON(map[string]interface{}{
 		"success": true,
@@ -387,6 +396,8 @@ func (c *TicketController) Assign() {
 		c.RenderError(400, "Failed to assign ticket: "+err.Error())
 		return
 	}
+
+	c.notifySuperAdmins("assign", id, "reassigned this ticket")
 
 	c.RenderJSON(map[string]interface{}{
 		"success": true,
@@ -522,6 +533,20 @@ func buildFilterQuery(filters map[string]string) string {
 		b.WriteString(url.QueryEscape(v))
 	}
 	return b.String()
+}
+
+func (c *TicketController) notifySuperAdmins(action string, ticketID int, summary string) {
+	actor := c.GetCurrentUser()
+	if actor == nil {
+		return
+	}
+	notifyRoles := map[string]bool{
+		string(models.RoleTechnician): true,
+	}
+	if !notifyRoles[actor.Role] {
+		return
+	}
+	(&services.NotificationService{}).NotifySuperAdmins(actor, ticketID, action, summary)
 }
 
 func (c *TicketController) windowedPages(page, totalPages int) []int {

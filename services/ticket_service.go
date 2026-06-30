@@ -126,27 +126,45 @@ func (s *TicketService) GetByBranchPaginated(branchID int, filters map[string]st
 	o := orm.NewOrm()
 	qs := o.QueryTable("tickets")
 
-	if branchID > 0 {
-		qs = qs.Filter("BranchId", branchID)
-	}
+	cond := orm.NewCondition()
 
+	if branchID > 0 {
+		cond = cond.And("BranchId", branchID)
+	}
 	if v, ok := filters["status"]; ok && v != "" {
-		qs = qs.Filter("Status", v)
+		cond = cond.And("Status", v)
 	}
 	if v, ok := filters["warranty"]; ok && v != "" {
-		qs = qs.Filter("WarrantyStatus", v)
-	}
-	if v, ok := filters["q"]; ok && v != "" {
-		qs = qs.Filter("SerialNumber__icontains", v)
+		cond = cond.And("WarrantyStatus", v)
 	}
 	if v, ok := filters["assigned"]; ok && v != "" {
 		if assignedID, err := strconv.Atoi(v); err == nil {
-			qs = qs.Filter("AssignedTo", assignedID)
+			cond = cond.And("AssignedTo", assignedID)
 		}
 	}
 	if v, ok := filters["brand"]; ok && v != "" {
-		qs = qs.Filter("Brand", v)
+		cond = cond.And("Brand", v)
 	}
+	if v, ok := filters["q"]; ok && v != "" {
+		v = strings.TrimSpace(v)
+		searchFields := []string{
+			"SerialNumber", "WorkOrderNumber", "CaseNumber", "PoNumber",
+			"RmaNumber", "RmaRefNumber", "IrNumber", "Upc", "PartNumber",
+			"NeededPart", "CourierTracking", "ReturnTracking", "Model",
+			"Brand", "CustomerName", "CustomerEmail", "CustomerPhone",
+			"IssueDescription", "DiagnosticCode",
+		}
+		search := orm.NewCondition()
+		for _, f := range searchFields {
+			search = search.Or(f+"__icontains", v)
+		}
+		if id, err := strconv.Atoi(v); err == nil {
+			search = search.Or("Id", id)
+		}
+		cond = cond.AndCond(search)
+	}
+
+	qs = qs.SetCond(cond)
 
 	totalCount, _ := qs.Count()
 

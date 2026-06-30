@@ -97,5 +97,8 @@
   "no": "否",
   "no_need": "无需",
   "pending": "待定",
-  "all": "全部"
+  "all": "全部",
+  "notifications": "通知",
+  "no_notifications": "暂无通知",
+  "mark_all_read": "全部标为已读"
 }

@@ -49,6 +49,7 @@ func init() {
 		new(models.SheetRowLink),
 		new(models.SheetConflict),
 		new(models.SheetAdoption),
+		new(models.Notification),
 	)
 }
 

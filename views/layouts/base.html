@@ -31,6 +31,31 @@
                 <span class="nav-link text-danger"><i class="fas fa-exclamation-circle mr-1"></i>{{.flash_error}}</span>
             </li>
             {{end}}
+            {{if .currentUser.IsSuperAdmin}}
+            <li class="nav-item dropdown">
+                <a class="nav-link" data-toggle="dropdown" href="#">
+                    <i class="far fa-bell"></i>
+                    {{if .unreadNotifications}}<span class="badge badge-danger navbar-badge">{{.unreadNotifications}}</span>{{end}}
+                </a>
+                <div class="dropdown-menu dropdown-menu-lg dropdown-menu-right">
+                    <span class="dropdown-item dropdown-header">{{.unreadNotifications}} {{t .lang "notifications"}}</span>
+                    <div class="dropdown-divider"></div>
+                    {{range .recentNotifications}}
+                    <form method="POST" action="/notifications/{{.Id}}/read?ticket={{.TicketId}}" class="m-0">
+                        <button type="submit" class="dropdown-item text-truncate {{if not .IsRead}}font-weight-bold{{end}}">
+                            <i class="fas fa-laptop-medical mr-2 text-muted"></i>{{.ActorName}} {{.Message}}
+                            <span class="float-right text-muted text-sm">#{{.TicketId}}</span>
+                        </button>
+                    </form>
+                    <div class="dropdown-divider"></div>
+                    {{else}}
+                    <span class="dropdown-item text-muted">{{t .lang "no_notifications"}}</span>
+                    <div class="dropdown-divider"></div>
+                    {{end}}
+                    <a href="/notifications" class="dropdown-item dropdown-footer">{{t .lang "view_all"}}</a>
+                </div>
+            </li>
+            {{end}}
             <li class="nav-item dropdown">
                 <a class="nav-link dropdown-toggle" data-toggle="dropdown" href="#">
                     <i class="fas fa-user-circle mr-1"></i>{{.currentUser.Name}}

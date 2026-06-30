@@ -47,6 +47,14 @@ func (c *BaseController) loadCurrentUser() {
 	c.Data["currentUser"] = user
 	c.Data["lang"] = user.Language
 
+	if user.IsSuperAdmin() {
+		notificationService := services.NotificationService{}
+		unread, _ := notificationService.CountUnread(user.Id)
+		recent, _ := notificationService.RecentForUser(user.Id, 5)
+		c.Data["unreadNotifications"] = unread
+		c.Data["recentNotifications"] = recent
+	}
+
 	if tz := c.Ctx.GetCookie("tz"); tz != "" {
 		c.Data["userTimezone"] = tz
 	} else {

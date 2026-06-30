@@ -35,6 +35,10 @@ func init() {
 	web.Router("/audit", &controllers.AuditController{}, "get:Log")
 	web.Router("/audit/ticket/:id", &controllers.AuditController{}, "get:ForTicket")
 
+	web.Router("/notifications", &controllers.NotificationController{}, "get:List")
+	web.Router("/notifications/read-all", &controllers.NotificationController{}, "post:ReadAll")
+	web.Router("/notifications/:id/read", &controllers.NotificationController{}, "post:Read")
+
 	web.Router("/tickets/:id/comments", &controllers.CommentController{}, "post:Create")
 
 	web.Router("/import", &controllers.ImportController{}, "get:ShowImport;post:DoImport")

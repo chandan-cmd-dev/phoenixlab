@@ -97,5 +97,8 @@
   "no": "No",
   "no_need": "No Necesario",
   "pending": "Pendiente",
-  "all": "Todos"
+  "all": "Todos",
+  "notifications": "Notificaciones",
+  "no_notifications": "Sin notificaciones",
+  "mark_all_read": "Marcar todo como leído"
 }
