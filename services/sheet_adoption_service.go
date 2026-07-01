@@ -66,7 +66,10 @@ func (s *SheetAdoptionService) Resolve(connID int, decisions map[int]string, use
 
 		case decision == "new":
 			t := newTicketFromData(conn, data, userID)
-			if err := insertTicket(o, t, userID); err != nil {
+			if err := ensureTicketOwnership(o, t); err != nil {
+				continue
+			}
+			if _, err := o.Insert(t); err != nil {
 				continue
 			}
 			audit.Log("ticket", t.Id, "create", "", "", "Created via adoption review", userID, "")

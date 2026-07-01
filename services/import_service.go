@@ -185,7 +185,12 @@ func (s *ImportService) importSheet(f *excelize.File, sheetName string, branchID
 			}
 
 			ticket.AssignedTo = 0
-			if err := insertTicket(o, ticket, userID); err != nil {
+			if err := ensureTicketOwnership(o, ticket); err != nil {
+				result.Errors = append(result.Errors, fmt.Sprintf("Row %d (SN: %s): %v", i+1, sn, err))
+				result.Skipped++
+				continue
+			}
+			if _, err := o.Insert(ticket); err != nil {
 				result.Errors = append(result.Errors, fmt.Sprintf("Row %d (SN: %s): %v", i+1, sn, err))
 				result.Skipped++
 				continue

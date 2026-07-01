@@ -148,17 +148,13 @@ func runMigrations() {
 			continue
 		}
 
-		statements := strings.Split(string(content), ";")
+		// Execute the whole file in one Exec (lib/pq runs multiple
+		// semicolon-separated statements via the simple query protocol when no
+		// args are given). Splitting on ";" would corrupt PL/pgSQL function
+		// bodies and any semicolons inside comments.
 		var txErr error
-		for _, stmt := range statements {
-			stmt = strings.TrimSpace(stmt)
-			if stmt == "" {
-				continue
-			}
-			if _, err := tx.Exec(stmt); err != nil {
-				txErr = err
-				break
-			}
+		if _, err := tx.Exec(string(content)); err != nil {
+			txErr = err
 		}
 
 		if txErr != nil {

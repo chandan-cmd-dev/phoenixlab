@@ -321,7 +321,10 @@ func (s *SheetSyncService) applyCreate(o orm.Ormer, ctx *syncContext, act rowAct
 	if strings.TrimSpace(t.SerialNumber) == "" {
 		return fmt.Errorf("missing serial number")
 	}
-	if err := insertTicket(o, t, userID); err != nil {
+	if err := ensureTicketOwnership(o, t); err != nil {
+		return err
+	}
+	if _, err := o.Insert(t); err != nil {
 		return err
 	}
 	audit.Log("ticket", t.Id, "create", "", "", "Imported from Google Sheet: "+ctx.conn.TabName, userID, "")

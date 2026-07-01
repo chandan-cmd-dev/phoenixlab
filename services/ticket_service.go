@@ -14,48 +14,22 @@ import (
 
 type TicketService struct{}
 
-// insertTicket inserts t, persisting assigned_to as SQL NULL when the ticket is
-// unassigned (AssignedTo == 0). Beego stores 0 for an int column, which violates
-// the assigned_to -> users(id) FK, so we insert with a valid placeholder user id
-// and then null the column. placeholderUserID must be an existing user id.
-func insertTicket(o orm.Ormer, t *models.Ticket, placeholderUserID int) error {
-	unassigned := t.AssignedTo == 0
-	if unassigned {
-		t.AssignedTo = placeholderUserID
-	}
-	if _, err := o.Insert(t); err != nil {
-		return err
-	}
-	if unassigned {
-		if _, err := o.Raw("UPDATE tickets SET assigned_to = NULL WHERE id = ?", t.Id).Exec(); err != nil {
-			return err
-		}
-		t.AssignedTo = 0
-	}
-	return nil
-}
+// Unassigned/unlinked tickets carry 0 in their FK int columns (Beego cannot emit
+// SQL NULL for a non-pointer int). A BEFORE INSERT OR UPDATE trigger on tickets
+// (migration 017) rewrites those 0s to NULL, so plain ORM inserts/updates satisfy
+// the assigned_to/parent/linked foreign keys without any special handling here.
 
-// updateTicket updates the given fields, persisting assigned_to as NULL when the
-// ticket is being set to unassigned (AssignedTo == 0 among the changed fields).
-func updateTicket(o orm.Ormer, t *models.Ticket, fields []string) error {
-	nullAssignee := false
-	kept := make([]string, 0, len(fields))
-	for _, f := range fields {
-		if f == "AssignedTo" && t.AssignedTo == 0 {
-			nullAssignee = true
-			continue
-		}
-		kept = append(kept, f)
+// ensureTicketOwnership verifies the NOT NULL foreign keys (created_by, branch_id)
+// reference existing rows before insert. Unlike the nullable ticket FKs
+// (assigned_to/parent/linked, which the DB trigger normalizes to NULL), these
+// columns must hold a valid id, so a 0/stale value is surfaced as a clear error
+// instead of a raw foreign-key violation.
+func ensureTicketOwnership(o orm.Ormer, t *models.Ticket) error {
+	if t.CreatedBy == 0 || !o.QueryTable("users").Filter("id", t.CreatedBy).Exist() {
+		return fmt.Errorf("cannot create ticket: creator user %d does not exist", t.CreatedBy)
 	}
-	if len(kept) > 0 {
-		if _, err := o.Update(t, kept...); err != nil {
-			return err
-		}
-	}
-	if nullAssignee {
-		if _, err := o.Raw("UPDATE tickets SET assigned_to = NULL WHERE id = ?", t.Id).Exec(); err != nil {
-			return err
-		}
+	if t.BranchId == 0 || !o.QueryTable("branches").Filter("id", t.BranchId).Exist() {
+		return fmt.Errorf("cannot create ticket: branch %d does not exist", t.BranchId)
 	}
 	return nil
 }
@@ -73,7 +47,10 @@ func (s *TicketService) Create(t *models.Ticket, userID int) error {
 	}
 	o := orm.NewOrm()
 
-	if err := insertTicket(o, t, userID); err != nil {
+	if err := ensureTicketOwnership(o, t); err != nil {
+		return err
+	}
+	if _, err := o.Insert(t); err != nil {
 		return fmt.Errorf("failed to create ticket: %w", err)
 	}
 
@@ -148,7 +125,8 @@ func (s *TicketService) Update(t *models.Ticket, changedFields []string, userID 
 	}
 
 	t.Version = existing.Version + 1
-	return updateTicket(o, t, append(changedFields, "Version", "UpdatedAt"))
+	_, err := o.Update(t, append(changedFields, "Version", "UpdatedAt")...)
+	return err
 }
 
 func (s *TicketService) GetByBranch(branchID int, filters map[string]string) ([]*models.Ticket, error) {
@@ -304,7 +282,7 @@ func (s *TicketService) Assign(ticketID int, assignedTo int, userID int) error {
 	oldAssigned := t.AssignedTo
 	t.AssignedTo = assignedTo
 
-	if err := updateTicket(o, t, []string{"AssignedTo", "UpdatedAt"}); err != nil {
+	if _, err := o.Update(t, "AssignedTo", "UpdatedAt"); err != nil {
 		return err
 	}
 
